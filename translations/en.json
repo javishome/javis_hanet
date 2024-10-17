@@ -5,14 +5,12 @@
       "invalid_path": "Đường dẫn được cung cấp không hợp lệ. Phải ở định dạng `user/repo-name`."
     },
     "step": {
-      "user": {
+      "pick_implementation": {
         "data": {
-          "username": "Tài khoản (e.g. email or +84987654321)",
-          "password": "Mật khẩu",
           "url": "Chọn cloud"
         },
-        "description": "Đăng nhập tài khoản TTlock.",
-        "title": "Xác thực tài khoản."
+        "description": "Chọn cloud.",
+        "title": "Chọn cloud."
       }
     }
   },

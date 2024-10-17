@@ -4,33 +4,37 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 import logging
-from typing import Any,Dict, cast
+from typing import Any, Dict, cast
 
-from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
 from homeassistant.helpers import config_entry_oauth2_flow
+from homeassistant.const import  CONF_URL
 
-from .const import DOMAIN, SERVER_URL
+from .const import DOMAIN, SERVER_URL, HOST1, HOST2, HOST3, CLIENT_ID, CLIENT_SECRET,AUTHORIZE_URL
 import time
 import asyncio
-from aiohttp import ClientError, ClientResponseError
+from aiohttp import ClientError, ClientResponseError, client, web
 from http import HTTPStatus
 from homeassistant.components.application_credentials import AuthImplementation
-from homeassistant.components.application_credentials import (
-    ClientCredential
-)
+from homeassistant.components.application_credentials import ClientCredential
 from homeassistant.components.application_credentials import AuthorizationServer
 from homeassistant.loader import async_get_application_credentials
 from homeassistant.components import http
 import voluptuous as vol
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from json import JSONDecodeError
+import voluptuous as vol
 
 
 OAUTH_TOKEN_TIMEOUT_SEC = 30
 
 LOGGER = logging.getLogger(__name__)
-
-
+AUTH_SCHEMA = vol.Schema(
+    {
+     vol.Required(CONF_URL, default=HOST3): vol.In(
+                    [HOST1, HOST2, HOST3]
+                )}
+)
 
 class SpotifyFlowHandler(
     config_entry_oauth2_flow.AbstractOAuth2FlowHandler, domain=DOMAIN
@@ -39,24 +43,23 @@ class SpotifyFlowHandler(
 
     DOMAIN = DOMAIN
     VERSION = 1
+    add_url = ""
 
     @property
     def logger(self) -> logging.Logger:
         """Return logger."""
         return logging.getLogger(__name__)
 
-
     async def async_oauth_create_entry(self, data: dict[str, Any]) -> ConfigFlowResult:
         """Create an entry for Spotify."""
-        name = data['token']['email']
-        await self.async_set_unique_id(data['token']["userID"])
+        name = data["token"]["email"]
+        await self.async_set_unique_id(data["token"]["userID"])
 
         return self.async_create_entry(title=name, data=data)
 
     async def async_step_reauth(
         self, entry_data: Mapping[str, Any]
     ) -> ConfigFlowResult:
-
         """Perform reauth upon migration of old entries."""
         return await self.async_step_reauth_confirm()
 
@@ -81,10 +84,10 @@ class SpotifyFlowHandler(
         LOGGER.debug("Creating config entry from external data")
         session = async_get_clientsession(self.hass)
         data = {
-                "grant_type": "authorization_code",
-                "code": self.external_data["code"],
-                "redirect_uri": self.external_data["state"]["redirect_uri"]
-            }
+            "grant_type": "authorization_code",
+            "code": self.external_data["code"],
+            "redirect_uri": self.external_data["state"]["redirect_uri"],
+        }
 
         try:
             async with asyncio.timeout(OAUTH_TOKEN_TIMEOUT_SEC):
@@ -95,7 +98,9 @@ class SpotifyFlowHandler(
                     except (ClientError, JSONDecodeError):
                         error_response = {}
                     error_code = error_response.get("error", "unknown")
-                    error_description = error_response.get("error_description", "unknown error")
+                    error_description = error_response.get(
+                        "error_description", "unknown error"
+                    )
                     LOGGER.error(
                         "Token request for %s failed (%s): %s",
                         self.domain,
@@ -131,49 +136,48 @@ class SpotifyFlowHandler(
         self.logger.info("Successfully authenticated")
 
         return await self.async_oauth_create_entry(
-            {"auth_implementation": self.flow_impl.domain, "token": token}
+            {"auth_implementation": self.flow_impl.domain, "token": token, "url": self.add_url}
         )
 
     async def async_step_pick_implementation(
         self, user_input: dict | None = None
     ) -> ConfigFlowResult:
         """Handle a flow start."""
-        client_id = "94414a66f3c6a7e2ceadc17af8ccdd60"
-        client_secret = "client_secret"
-        implementation = AuthImplementation(self.hass,DOMAIN,
-            ClientCredential(
-                client_id,
-                client_secret,
-            ),
-            AuthorizationServer(
-                authorize_url="https://oauth.hanet.com/oauth2/authorize",
-                token_url= SERVER_URL + "/token",
+
+
+        # if user_input is not None:
+        #     self.flow_impl = implementation
+        #     return await self.async_step_auth()
+
+        if  user_input:
+            self.add_url = user_input[CONF_URL]
+            url = SERVER_URL + self.add_url + "/api/hanet/token"
+            implementation = AuthImplementation(
+                self.hass,
+                DOMAIN,
+                ClientCredential(
+                    CLIENT_ID,
+                    CLIENT_SECRET,
+                ),
+                AuthorizationServer(
+                    authorize_url=AUTHORIZE_URL,
+                    token_url=url,
+                ),
             )
-        )
 
-        if user_input is not None:
-            self.flow_impl = implementation
-            return await self.async_step_auth()
+            if not implementation:
+                if self.DOMAIN in await async_get_application_credentials(self.hass):
+                    return self.async_abort(reason="missing_credentials")
+                return self.async_abort(reason="missing_configuration")
 
-        if not implementation:
-            if self.DOMAIN in await async_get_application_credentials(self.hass):
-                return self.async_abort(reason="missing_credentials")
-            return self.async_abort(reason="missing_configuration")
-
-        req = http.current_request.get()
-        if implementation and req is not None:
-            # Pick first implementation if we have only one, but only
-            # if this is triggered by a user interaction (request).
-            self.flow_impl = implementation
-            return await self.async_step_auth()
+            req = http.current_request.get()
+            if implementation and req is not None:
+                # Pick first implementation if we have only one, but only
+                # if this is triggered by a user interaction (request).
+                self.flow_impl = implementation
+                return await self.async_step_auth()
 
         return self.async_show_form(
             step_id="pick_implementation",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        "implementation", default=implementation
-                    )
-                }
-            ),
+            data_schema=AUTH_SCHEMA
         )
