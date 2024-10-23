@@ -44,6 +44,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    await hass.async_add_executor_job(remove_data)
+    # await hass.async_add_executor_job(remove_data)
     return True
 
