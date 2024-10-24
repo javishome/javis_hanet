@@ -35,6 +35,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async with aiohttp.ClientSession() as session:
         async with session.post(get_host(use_const.SERVER_URL, add_url) + "/api/hanet/get_info", data=data) as response:
             info = await response.json()
+            if response.status != 200:
+                LOGGER.error(info)
+                return False
             # write data
 
     if info:
