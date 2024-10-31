@@ -5,12 +5,14 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 import aiohttp
-
+from .services import Services
 from .load_const import use_const
 import logging
 import json
 import os
 from .utils import get_host
+from homeassistant.const import __version__ as ha_version
+
 LOGGER = logging.getLogger(__name__)
 
 __all__ = [
@@ -24,6 +26,22 @@ def write_data(data):
 def remove_data():
     if os.path.exists(use_const.PATH):
         os.remove(use_const.PATH)
+
+
+def setup(hass: HomeAssistant, config: ConfigEntry) -> bool:
+    """Set up the TTLock component."""
+    if is_new_version():
+        Services(hass).register_new()
+    else:
+        Services(hass).register_old()
+
+    return True
+
+def is_new_version():
+    year,version = ha_version.split('.')[:2]
+    if int(year) >= 2024 and int(version) >= 7:
+        return True
+    return False
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Spotify from a config entry."""

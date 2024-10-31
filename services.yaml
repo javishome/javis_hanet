@@ -1,0 +1,11 @@
+write_person:
+  name: Log person
+  description: Log person
+  fields:
+    payload:
+      name: Payload
+      description: Payload
+      required: true
+      selector:
+        text:
+

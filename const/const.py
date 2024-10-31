@@ -6,7 +6,8 @@ DOMAIN = "javis_hanet"
 
 SERVER_URL = "https://lock-api."
 
-PATH = "/config/person_javis_v2.json"
+PATH_CONFIG = "/config/"
+PATH = PATH_CONFIG + "person_javis_v2.json"
 
 HOST1 = "javisco.com"
 HOST2 = "javishome.io"
@@ -18,3 +19,8 @@ AUTHORIZE_URL = "https://oauth.hanet.com/oauth2/authorize"
 
 MODE = "prod"
 
+SVC_WRITE_PERSON = "write_person"
+SVC_PUSH_PERSON = "push_person"
+
+FOLDER_PERSON_LOG = PATH_CONFIG + "timesheet/"
+PATH_PERSON_LOG = FOLDER_PERSON_LOG + "timesheet.log"

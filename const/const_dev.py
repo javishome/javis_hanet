@@ -3,7 +3,8 @@ import os
 DOMAIN = "javis_hanet"
 
 SERVER_URL = "https://improved-liger-tops.ngrok-free.app"
-PATH = os.getcwd() + "/config/person_javis_v2.json"
+PATH_CONFIG = os.getcwd() + "/config/"
+PATH = PATH_CONFIG + "person_javis_v2.json"
 
 HOST1 = "javisco.com"
 HOST2 = "javishome.io"
@@ -14,3 +15,9 @@ CLIENT_SECRET = "secret"
 AUTHORIZE_URL = "https://oauth.hanet.com/oauth2/authorize"
 
 MODE = "dev"
+
+SVC_WRITE_PERSON = "write_person"
+SVC_PUSH_PERSON = "push_person"
+
+FOLDER_PERSON_LOG = PATH_CONFIG + "timesheet/"
+PATH_PERSON_LOG = FOLDER_PERSON_LOG + "timesheet.log"
