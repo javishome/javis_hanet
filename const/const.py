@@ -20,7 +20,7 @@ AUTHORIZE_URL = "https://oauth.hanet.com/oauth2/authorize"
 MODE = "prod"
 
 SVC_WRITE_PERSON = "write_person"
-SVC_PUSH_PERSON = "push_person"
+SVC_PUSH_TO_QCD = "push_to_qcd"
 
 FOLDER_PERSON_LOG = PATH_CONFIG + "timesheet/"
 PATH_PERSON_LOG = FOLDER_PERSON_LOG + "timesheet.log"

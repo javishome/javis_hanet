@@ -65,6 +65,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    # await hass.async_add_executor_job(remove_data)
+    token = entry.data.get("token")
+    data = {"access_token": token.get("access_token")}
+    add_url = entry.data.get("url")
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(get_host(use_const.SERVER_URL, add_url) + "/api/hanet/get_info", data=data) as response:
+            info = await response.json()
+            if response.status != 200:
+                LOGGER.error(info)
+                return False
+    await hass.async_add_executor_job(remove_data)
     return True
 
