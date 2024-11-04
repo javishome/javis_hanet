@@ -74,7 +74,7 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL
         )
 
-        self.hass.register(
+        self.hass.services.register(
             use_const.DOMAIN,
             use_const.SVC_PUSH_TO_QCD,
             self.change_face_log_name,

@@ -74,7 +74,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             info = await response.json()
             if response.status != 200:
                 LOGGER.error(info)
-                return False
-    await hass.async_add_executor_job(remove_data)
+            else:
+                await hass.async_add_executor_job(remove_data)
     return True
 
