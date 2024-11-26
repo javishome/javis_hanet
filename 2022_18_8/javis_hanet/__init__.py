@@ -157,7 +157,7 @@ class Services:
         payload = call.data.get("payload")
         try:
             data = json.loads(payload)
-            self.hass.add_job(write_data, data)
+            self.hass.add_job(write_data_log_qcd, data)
             return {"status": "ok"}
         except Exception as e:
             LOGGER.error(traceback.format_exc())
@@ -174,7 +174,7 @@ class Services:
             return {"status": "error", "message": str(e)}
 
 
-def write_data( data):
+def write_data_log_qcd( data):
     #check if folder exist
     if data.get("person_id") == '':
         return

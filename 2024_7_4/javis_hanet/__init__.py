@@ -12,18 +12,14 @@ import os
 from homeassistant.const import __version__ as ha_version
 from datetime import datetime
 import voluptuous as vol
-from homeassistant.core import (
-    HomeAssistant,
-    ServiceCall,
-    ServiceResponse,
-    SupportsResponse
-    )
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 import homeassistant.helpers.config_validation as cv
+import traceback
 
 LOGGER = logging.getLogger(__name__)
 
-# defind config 
-#common
+# defind config
+# common
 DOMAIN = "javis_hanet"
 HOST1 = "javisco.com"
 HOST2 = "javishome.io"
@@ -34,32 +30,34 @@ AUTHORIZE_URL = "https://oauth.hanet.com/oauth2/authorize"
 SVC_WRITE_PERSON = "write_person"
 SVC_PUSH_TO_QCD = "push_to_qcd"
 
-#1 prod
-SERVER_URL = "https://lock-api."
-PATH_CONFIG = "/config/"
-MODE = "prod"
+# 1 prod
+# SERVER_URL = "https://lock-api."
+# PATH_CONFIG = "/config/"
+# MODE = "prod"
 
-# #2 dev (server test and ha test)
-# SERVER_URL = "https://improved-liger-tops.ngrok-free.app"
-# PATH_CONFIG = os.getcwd() + "/config/"
-# MODE = "dev"
+# 2 dev (server test and ha test)
+SERVER_URL = "https://improved-liger-tops.ngrok-free.app"
+PATH_CONFIG = os.getcwd() + "/config/"
+MODE = "dev"
 # #3 real dev (for server test on ha real)
 # SERVER_URL = "https://improved-liger-tops.ngrok-free.app"
 # PATH_CONFIG = "/config/"
 # MODE = "dev_ha_real"
-#common
+# common
 PATH = PATH_CONFIG + "person_javis_v2.json"
 FOLDER_PERSON_LOG = PATH_CONFIG + "timesheet/"
 PATH_PERSON_LOG = FOLDER_PERSON_LOG + "timesheet.log"
 
 
-__all__ = [
-    "DOMAIN"
-]
+__all__ = ["DOMAIN"]
+
 
 def write_data(data):
-    with open(PATH, "w", encoding='utf-8') as json_file:
-        json.dump(data, json_file,ensure_ascii=False, indent=4)  # indent=4 for pretty formatting
+    with open(PATH, "w", encoding="utf-8") as json_file:
+        json.dump(
+            data, json_file, ensure_ascii=False, indent=4
+        )  # indent=4 for pretty formatting
+
 
 def remove_data():
     if os.path.exists(PATH):
@@ -75,11 +73,13 @@ def setup(hass: HomeAssistant, config: ConfigEntry) -> bool:
 
     return True
 
+
 def is_new_version():
-    year,version = ha_version.split('.')[:2]
+    year, version = ha_version.split(".")[:2]
     if int(year) >= 2024 and int(version) >= 7:
         return True
     return False
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Spotify from a config entry."""
@@ -89,7 +89,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     add_url = entry.data.get("url")
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(get_host(SERVER_URL, add_url) + "/api/hanet/get_info", data=data) as response:
+        async with session.post(
+            get_host(SERVER_URL, add_url) + "/api/hanet/get_info", data=data
+        ) as response:
             info = await response.json()
             if response.status != 200:
                 LOGGER.error(info)
@@ -101,6 +103,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     return True
 
+
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     token = entry.data.get("token")
@@ -108,13 +111,16 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     add_url = entry.data.get("url")
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(get_host(SERVER_URL, add_url) + "/api/hanet/get_info", data=data) as response:
+        async with session.post(
+            get_host(SERVER_URL, add_url) + "/api/hanet/get_info", data=data
+        ) as response:
             info = await response.json()
             if response.status != 200:
                 LOGGER.error(info)
             else:
                 await hass.async_add_executor_job(remove_data)
     return True
+
 
 class Services:
     """Wraps service handlers."""
@@ -125,7 +131,7 @@ class Services:
 
     def register_old(self) -> None:
         """Register services for javis_lock integration."""
-        #Tạo passcode
+        # Tạo passcode
         self.hass.services.async_register(
             DOMAIN,
             SVC_WRITE_PERSON,
@@ -134,11 +140,10 @@ class Services:
                 {
                     vol.Required("payload"): cv.string,
                 }
+            ),
+            supports_response=SupportsResponse.OPTIONAL,
+        )
 
-            ) ,
-            supports_response=SupportsResponse.OPTIONAL
-            )
-        
         self.hass.services.async_register(
             DOMAIN,
             SVC_PUSH_TO_QCD,
@@ -147,14 +152,13 @@ class Services:
                 {
                     vol.Required("secret_key"): cv.string,
                 }
-
             ),
-            supports_response=SupportsResponse.OPTIONAL
+            supports_response=SupportsResponse.OPTIONAL,
         )
 
     def register_new(self) -> None:
         """Register services for javis_lock integration."""
-        #Tạo passcode
+        # Tạo passcode
         self.hass.services.register(
             DOMAIN,
             SVC_WRITE_PERSON,
@@ -163,9 +167,8 @@ class Services:
                 {
                     vol.Required("payload"): cv.string,
                 }
-
             ),
-            supports_response=SupportsResponse.OPTIONAL
+            supports_response=SupportsResponse.OPTIONAL,
         )
 
         self.hass.services.register(
@@ -176,24 +179,22 @@ class Services:
                 {
                     vol.Required("secret_key"): cv.string,
                 }
-
             ),
-            supports_response=SupportsResponse.OPTIONAL
+            supports_response=SupportsResponse.OPTIONAL,
         )
 
-    def handle_write_person(self, call: ServiceCall) -> ServiceResponse :
+    def handle_write_person(self, call: ServiceCall):
         """Handle the service call."""
         payload = call.data.get("payload")
         try:
             data = json.loads(payload)
-            self.hass.add_job(write_data, data)
+            self.hass.add_job(write_data_log_qcd, data)
             return {"status": "ok"}
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             return {"status": "error", "message": str(e)}
-    
-    async def change_face_log_name(self, call: ServiceCall):
 
+    async def change_face_log_name(self, call: ServiceCall):
         secret_key = call.data.get("secret_key")
         try:
             self.hass.async_add_job(change_file_name, secret_key)
@@ -203,17 +204,17 @@ class Services:
             return {"status": "error", "message": str(e)}
 
 
-
-def write_data( data):
-    #check if folder exist
+def write_data_log_qcd(data):
+    # check if folder exist
     if os.path.exists(FOLDER_PERSON_LOG) == False:
         os.makedirs(FOLDER_PERSON_LOG)
-    #convert data to string and add to file
-    with open(PATH_PERSON_LOG, "a", encoding='utf-8') as txt_file:
+    # convert data to string and add to file
+    with open(PATH_PERSON_LOG, "a", encoding="utf-8") as txt_file:
         txt_file.write(str(data) + "\n")
 
+
 async def change_file_name(secret_key):
-    #change name
+    # change name
     if os.path.exists(PATH_PERSON_LOG) == False:
         return
     new_file_name = datetime.now().strftime("%y%m%d") + ".log"
@@ -222,11 +223,11 @@ async def change_file_name(secret_key):
 
     qcd_url = "https://qcd.arrow-tech.vn/api/v2/resum-timesheet"
     headers = {
-    "Content-Type": "application/json; charset=utf-8",
-        "timesheet_secret_key": secret_key
+        "Content-Type": "application/json; charset=utf-8",
+        "timesheet_secret_key": secret_key,
     }
     payload = []
-    with open(new_file_path, "r", encoding='utf-8') as txt_file:
+    with open(new_file_path, "r", encoding="utf-8") as txt_file:
         content = txt_file.read()
         for line in content.split("\n"):
             if line == "":
@@ -236,11 +237,12 @@ async def change_file_name(secret_key):
             payload.append(data)
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(qcd_url, json=payload, headers = headers) as response:
+        async with session.post(qcd_url, json=payload, headers=headers) as response:
             info = await response.json()
             if response.status != 200:
                 LOGGER.error(info)
                 return False
+
 
 def get_host(server, add_url):
     """Get the url from the config entry."""
@@ -248,14 +250,16 @@ def get_host(server, add_url):
         return server
     return server + add_url
 
+
 def get_hc_url(add_url):
     """Get the url from the config entry."""
     if MODE == "dev":
         return "http://127.0.0.1:8123"
     else:
-        mac =  get_mac()
+        mac = get_mac()
         base_url = f"https://{mac}.{add_url}"
     return base_url
+
 
 def get_mac():
     mac = uuid.UUID(int=uuid.getnode()).hex[-12:]

@@ -231,3 +231,10 @@ class SpotifyFlowHandler(
             )
             .update_query(self.flow_impl.extra_authorize_data)
         )
+
+    async def async_step_user(self, user_input=None):
+        """Handle a flow initialized by the user."""
+        if self._async_current_entries():
+            return self.async_abort(reason="single_instance_allowed")
+
+        return await self.async_step_pick_implementation()
