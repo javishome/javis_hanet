@@ -31,14 +31,14 @@ SVC_WRITE_PERSON = "write_person"
 SVC_PUSH_TO_QCD = "push_to_qcd"
 
 # 1 prod
-# SERVER_URL = "https://lock-api."
-# PATH_CONFIG = "/config/"
-# MODE = "prod"
+SERVER_URL = "https://lock-api."
+PATH_CONFIG = "/config/"
+MODE = "prod"
 
-# 2 dev (server test and ha test)
-SERVER_URL = "https://improved-liger-tops.ngrok-free.app"
-PATH_CONFIG = os.getcwd() + "/config/"
-MODE = "dev"
+# # 2 dev (server test and ha test)
+# SERVER_URL = "https://improved-liger-tops.ngrok-free.app"
+# PATH_CONFIG = os.getcwd() + "/config/"
+# MODE = "dev"
 # #3 real dev (for server test on ha real)
 # SERVER_URL = "https://improved-liger-tops.ngrok-free.app"
 # PATH_CONFIG = "/config/"
