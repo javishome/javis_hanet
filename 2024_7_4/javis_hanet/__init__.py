@@ -90,7 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            get_host(SERVER_URL, add_url) + "/api/hanet/get_info", data=data
+            get_host(add_url) + "/api/hanet/get_info", data=data
         ) as response:
             info = await response.json()
             if response.status != 200:
@@ -112,7 +112,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            get_host(SERVER_URL, add_url) + "/api/hanet/get_info", data=data
+            get_host(add_url) + "/api/hanet/get_info", data=data
         ) as response:
             info = await response.json()
             if response.status != 200:
@@ -244,11 +244,12 @@ async def change_file_name(secret_key):
                 return False
 
 
-def get_host(server, add_url):
+def get_host(add_url):
+
     """Get the url from the config entry."""
     if MODE == "dev" or MODE == "dev_ha_real":
-        return server
-    return server + add_url
+        return SERVER_URL
+    return SERVER_URL + add_url
 
 
 def get_hc_url(add_url):

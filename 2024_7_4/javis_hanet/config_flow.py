@@ -25,7 +25,7 @@ import voluptuous as vol
 from homeassistant.helpers.network import NoURLAvailableError
 from yarl import URL
 from . import get_host, get_hc_url
-from . import DOMAIN, HOST1, HOST2, HOST3, CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, SERVER_URL
+from . import DOMAIN, HOST1, HOST2, HOST3, CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL
 OAUTH_AUTHORIZE_URL_TIMEOUT_SEC = 30
 
 
@@ -154,7 +154,7 @@ class SpotifyFlowHandler(
 
         if  user_input:
             self.add_url = user_input[CONF_URL]
-            url = get_host(SERVER_URL, self.add_url) + "/api/hanet/token"
+            url = get_host(self.add_url) + "/api/hanet/token"
             implementation = AuthImplementation(
                 self.hass,
                 DOMAIN,
@@ -216,7 +216,7 @@ class SpotifyFlowHandler(
     async def async_generate_authorize_url(self) -> str:
         """Generate a url for the user to authorize."""
 
-        redirect_uri = get_host(SERVER_URL, self.add_url) + "/api/hanet/authcode"+ "?server_url=" + get_hc_url( self.add_url)
+        redirect_uri = get_host(self.add_url) + "/api/hanet/authcode"+ "?server_url=" + get_hc_url( self.add_url)
         return str(
             URL(self.flow_impl.authorize_url)
             .with_query(
