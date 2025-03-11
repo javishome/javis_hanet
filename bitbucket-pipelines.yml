@@ -7,8 +7,9 @@ pipelines:
                   script:
                       - ls 
                       - cp -r ./main_code/* ./build/2024_12_4/
-                      - ls ./build/2024_12_4/
-                      - python3 ./build/2024_12_4/encode.py
+                      - cd ./build/2024_12_4/
+                      - python3 ./encode.py
+                      - cd ../../
                       - ls ./build/2024_12_4/
                       - rm -rf ./main_code
                       - git add .                 
