@@ -12,4 +12,5 @@ pipelines:
                       - ls ./build/2024_12_4/
                       - rm -rf ./main_code
                       - git add .                 
-                      - git push --all git@github.com:javishome/javis_cam_ai.git
+                      - git commit -m "update code"
+                      - git push --all --force git@github.com:javishome/javis_cam_ai.git
