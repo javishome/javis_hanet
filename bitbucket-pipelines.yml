@@ -13,4 +13,4 @@ pipelines:
                       - rm -rf ./main_code
                       - git add .                 
                       - git commit -m "Update maincode"
-                      - git push --all git@github.com:javishome/javis_cam_ai.git
+                      - git push --all --force git@github.com:javishome/javis_cam_ai.git
