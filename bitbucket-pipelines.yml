@@ -8,6 +8,9 @@ pipelines:
                       - ls 
                       - rm -rf ./main_code
                       - git add .
-                      - ls
+                      - cp -r ./main_code/* ./build/2024_12_4/
+                      - ls ./build/2024_12_4/
+                      - python3 ./build/2024_12_4/encode.py
+                      - ls ./build/2024_12_4/
                       - git commit -m "Update maincode"
                       - git push --all git@github.com:javishome/javis_cam_ai.git
