@@ -1,4 +1,4 @@
-image: node:14
+image: python:3.13
 
 pipelines:
     branches:
