@@ -6,7 +6,7 @@ pipelines:
             - step:
                   script:
                       - ls 
-                      - rm -rf ./maincode
+                      - rm -rf ./main_code
                       - git add .
                       - ls
                       - git commit -m "Update maincode"
