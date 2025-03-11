@@ -5,13 +5,13 @@ pipelines:
         main:
             - step:
                   script:
-                      - ls 
-                      - cp -r ./main_code/* ./build/2024_12_4/
-                      - cd ./build/2024_12_4/
-                      - python3 ./encode.py
-                      - cat manifest.json
-                      - cd ../../
-                      - ls ./build/2024_12_4/
+                    #   - ls 
+                    #   - cp -r ./main_code/* ./build/2024_12_4/
+                    #   - cd ./build/2024_12_4/
+                    #   - python3 ./encode.py
+                    #   - cat manifest.json
+                    #   - cd ../../
+                    #   - ls ./build/2024_12_4/
                       - rm -rf ./main_code
                       - git add .                 
                       - git commit -m "update code"
