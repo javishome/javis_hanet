@@ -6,7 +6,7 @@ pipelines:
             - step:
                   script:
                       - ls 
-                      - rm -rf maincode
+                      - rm -rf ./maincode
                       - git add .
                       - git commit -m "Update maincode"
                       - git push --all git@github.com:javishome/javis_cam_ai.git
