@@ -1,0 +1,12 @@
+{
+    "domain": "javis_hanet",
+    "name": "Javis Hanet",
+    "codeowners": ["@javishome"],
+    "config_flow": true,
+    "dependencies": ["application_credentials"],
+    "documentation": "https://javishome.vn",
+    "iot_class": "cloud_polling",
+    "requirements": [],
+    "zeroconf": [],
+    "version": "v1.0.0"
+  }
