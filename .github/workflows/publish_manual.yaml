@@ -35,13 +35,13 @@ jobs:
       - name: ZIP Component Dir
         run: |
           cd ${{ github.workspace }}/build/${{ github.event.inputs.set_release }}
-          zip -r javis_cam_ai.zip ./
+          zip -r javis_hanet.zip ./
 
       - name: Upload zip to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ github.workspace }}/build/${{ github.event.inputs.set_release }}/javis_cam_ai.zip
-          asset_name: javis_cam_ai.zip
+          file: ${{ github.workspace }}/build/${{ github.event.inputs.set_release }}/javis_hanet.zip
+          asset_name: javis_hanet.zip
           tag: "v${{ github.event.inputs.set_release }}_${{ env.VERSION }}"
           overwrite: true

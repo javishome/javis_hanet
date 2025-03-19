@@ -34,13 +34,13 @@ jobs:
       - name: ZIP Component Dir
         run: |
           cd ${{ github.workspace }}/build/2024_4_4
-          zip -r javis_cam_ai.zip ./
+          zip -r javis_hanet.zip ./
 
       - name: Upload zip to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ github.workspace }}/build/2024_4_4/javis_cam_ai.zip
-          asset_name: javis_cam_ai.zip
+          file: ${{ github.workspace }}/build/2024_4_4/javis_hanet.zip
+          asset_name: javis_hanet.zip
           tag: "v2024_4_4_${{ env.VERSION }}"
           overwrite: true
