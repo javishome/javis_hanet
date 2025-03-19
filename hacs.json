@@ -3,7 +3,7 @@
     "content_in_root": false,
     "zip_release": true,
     "homeassistant": "2024.4.4",
-    "filename": "javis_cam_ai.zip",
+    "filename": "javis_hanet.zip",
     "hide_default_branch": true,
     "hacs": "1.35.0"
 }
