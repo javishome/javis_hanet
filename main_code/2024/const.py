@@ -1,6 +1,5 @@
 # defind config
 # common
-from .utils import get_host
 DOMAIN = "javis_hanet"
 HOST1 = "javisco.com"
 HOST2 = "javishome.io"
