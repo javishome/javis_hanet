@@ -64,7 +64,7 @@ class HanetFlowHandler(
             "access_token": data["token"]["access_token"],
         }
         try:
-            async with session.post(API_GET_PLACES_INFO_URL, data = body_data) as response:
+            async with session.post(get_host(self.add_url) + API_GET_PLACES_INFO_URL, data = body_data) as response:
                 if response.status == HTTPStatus.OK:
                     places_info = await response.json()
                     data["places_info"] = places_info
@@ -326,7 +326,8 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
 
         # Giá trị mặc định lấy từ config_entry.data nếu options chưa có
         data = {**self.config_entry.data, **self.config_entry.options}
-
+        self.add_url = data.get("url", HOST3)  # Lấy URL từ options hoặc mặc định HOST3
+        
         if user_input is not None:
             # Nếu user nhập thông tin, validate
             selected = user_input["selected_places"]
@@ -358,7 +359,7 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
             "access_token": data["token"]["access_token"],
         }
         try:
-            async with session.post(API_GET_PLACES_INFO_URL, data = body_data) as response:
+            async with session.post(get_host(self.add_url) + API_GET_PLACES_INFO_URL, data = body_data) as response:
                 if response.status == HTTPStatus.OK:
                     self.places_info = await response.json()
                 else:

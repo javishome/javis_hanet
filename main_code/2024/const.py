@@ -1,5 +1,6 @@
 # defind config
 # common
+from .utils import get_host
 DOMAIN = "javis_hanet"
 HOST1 = "javisco.com"
 HOST2 = "javishome.io"
@@ -27,5 +28,5 @@ MODE = "prod"
 PATH = PATH_CONFIG + "person_javis_v2.json"
 FOLDER_PERSON_LOG = PATH_CONFIG + "timesheet/"
 PATH_PERSON_LOG = FOLDER_PERSON_LOG + "timesheet.log"
-API_GET_PLACES_INFO_URL = SERVER_URL + "/api/hanet/get_places"
-API_GET_INFO_WITH_PLACES = SERVER_URL + "/api/hanet/get_info_with_places"
+API_GET_PLACES_INFO_URL =  "/api/hanet/get_places"
+API_GET_INFO_WITH_PLACES = "/api/hanet/get_info_with_places"
