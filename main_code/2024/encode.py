@@ -1,6 +1,6 @@
 import os
 
-files_pyc = ["__init__.py"]
+files_pyc = ["__init__.py", "const.py", "utils.py"]
 
 # Biên dịch file .py thành .pyc và xóa file gốc
 for file in files_pyc:
