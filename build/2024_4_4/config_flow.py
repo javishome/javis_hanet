@@ -9,7 +9,7 @@ from typing import Any, Dict, cast
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
 from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.const import  CONF_URL
-
+from homeassistant import config_entries
 import time
 import asyncio
 from http import HTTPStatus
@@ -19,13 +19,13 @@ from homeassistant.components.application_credentials import AuthorizationServer
 from homeassistant.loader import async_get_application_credentials
 from homeassistant.components import http
 import voluptuous as vol
+import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from json import JSONDecodeError
-import voluptuous as vol
 from homeassistant.helpers.network import NoURLAvailableError
 from yarl import URL
-from . import get_host, get_hc_url
-from . import DOMAIN, HOST1, HOST2, HOST3, CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL
+from .const import *
+from .utils import *
 OAUTH_AUTHORIZE_URL_TIMEOUT_SEC = 30
 
 
@@ -39,7 +39,7 @@ AUTH_SCHEMA = vol.Schema(
                 )}
 )
 
-class SpotifyFlowHandler(
+class HanetFlowHandler(
     config_entry_oauth2_flow.AbstractOAuth2FlowHandler, domain=DOMAIN
 ):
     """Config flow to handle Spotify OAuth2 authentication."""
@@ -54,11 +54,85 @@ class SpotifyFlowHandler(
         return logging.getLogger(__name__)
 
     async def async_oauth_create_entry(self, data: dict[str, Any]) -> ConfigFlowResult:
-        """Create an entry for Spotify."""
-        name = data["token"]["email"]
+        """Create an entry for Hanet with user-selected places."""
         await self.async_set_unique_id(data["token"]["userID"])
 
-        return self.async_create_entry(title=name, data=data)
+        # Gọi API lấy places
+        session = async_get_clientsession(self.hass)
+        self.logger.info("data: %s", data)
+        body_data = {
+            "access_token": data["token"]["access_token"],
+        }
+        try:
+            async with session.post(API_GET_PLACES_INFO_URL, data = body_data) as response:
+                if response.status == HTTPStatus.OK:
+                    places_info = await response.json()
+                    data["places_info"] = places_info
+                else:
+                    LOGGER.error("Failed to fetch places info: %s", response.status)
+                    return self.async_abort(reason="fetch_places_info_failed")
+        except Exception as e:
+            LOGGER.error("Error fetching places info: %s", str(e))
+            return self.async_abort(reason="places_info_not_found")
+
+        if not data["places_info"]:
+            return self.async_abort(reason="no_places_info_available")
+
+        # Lưu dữ liệu tạm để step tiếp theo dùng
+        self.places_info = data["places_info"]
+        self.token_data = data  # Giữ token + places
+        self.logger.info("Token data: %s", self.token_data)
+
+        return await self.async_step_select_places()
+    
+    async def async_step_select_places(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Let user select places."""
+
+        errors = {}
+
+        places_dict = {
+            str(place["place_id"]): place["place_name"] for place in self.places_info
+        }
+        schema = vol.Schema({
+            vol.Required("selected_places"): cv.multi_select(places_dict)
+        })
+
+
+        if user_input is not None:
+            selected = user_input["selected_places"]
+            if not selected:
+                errors["base"] = "no_place_selected"
+                return self.async_show_form(
+                    step_id="select_places",
+                    data_schema=schema,
+                    errors=errors,
+                )
+            
+            self.logger.info("Selected places: %s", selected)
+            
+            selected_places = [
+                place for place in self.places_info if str(place["place_id"]) in selected]
+
+            # Ghi vào token_data để lưu
+            self.token_data["selected_places"] = selected_places
+
+            # Bỏ places_info để không ghi thừa trong config entry
+            del self.token_data["places_info"]
+
+            self.logger.info("Token data after selection: %s", self.token_data)
+
+            return self.async_create_entry(
+                title=self.token_data["token"]["email"],
+                data=self.token_data,
+            )
+
+        return self.async_show_form(
+            step_id="select_places",
+            data_schema=schema,
+            errors=errors,
+        )
 
     async def async_step_reauth(
         self, entry_data: Mapping[str, Any]
@@ -84,7 +158,7 @@ class SpotifyFlowHandler(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Create config entry from external data."""
-        LOGGER.debug("Creating config entry from external data")
+        self.logger.info("Creating config entry from external data")
         session = async_get_clientsession(self.hass)
         data = {
             "grant_type": "authorization_code",
@@ -146,11 +220,6 @@ class SpotifyFlowHandler(
         self, user_input: dict | None = None
     ) -> ConfigFlowResult:
         """Handle a flow start."""
-
-
-        # if user_input is not None:
-        #     self.flow_impl = implementation
-        #     return await self.async_step_auth()
 
         if  user_input:
             self.add_url = user_input[CONF_URL]
@@ -238,3 +307,73 @@ class SpotifyFlowHandler(
             return self.async_abort(reason="single_instance_allowed")
 
         return await self.async_step_pick_implementation()
+    
+    @staticmethod
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry):
+        """Return the options flow handler for this config entry."""
+        return HanetOptionsFlow(config_entry)
+
+class HanetOptionsFlow(config_entries.OptionsFlow):
+    """Handle options for WebSocket Component."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry):
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        """Manage options."""
+        errors = {}
+
+        # Giá trị mặc định lấy từ config_entry.data nếu options chưa có
+        data = {**self.config_entry.data, **self.config_entry.options}
+
+        if user_input is not None:
+            # Nếu user nhập thông tin, validate
+            selected = user_input["selected_places"]
+            if not selected:
+                errors["base"] = "no_place_selected"
+                return self.async_show_form(
+                    step_id="select_places",
+                    data_schema=schema,
+                    errors=errors,
+                )
+            
+            selected_places = [
+                place for place in self.places_info if str(place["place_id"]) in selected]
+            
+            data["selected_places"] = selected_places
+            
+            self.hass.config_entries.async_update_entry(
+                self.config_entry,
+                options=data,                # Cập nhật options
+            )
+            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            return self.async_abort(reason="options_updated")
+
+                # Nếu OK thì lưu options mới
+
+        # Gọi API lấy places
+        session = async_get_clientsession(self.hass)
+        body_data = {
+            "access_token": data["token"]["access_token"],
+        }
+        try:
+            async with session.post(API_GET_PLACES_INFO_URL, data = body_data) as response:
+                if response.status == HTTPStatus.OK:
+                    self.places_info = await response.json()
+                else:
+                    LOGGER.error("Failed to fetch places info: %s", response.status)
+                    return self.async_abort(reason="fetch_places_info_failed")
+        except Exception as e:
+            LOGGER.error("Error fetching places info: %s", str(e))
+            return self.async_abort(reason="places_info_not_found")
+
+        places_dict = {
+            str(place["place_id"]): place["place_name"] for place in self.places_info
+        }
+        schema = vol.Schema({
+            vol.Required("selected_places"): cv.multi_select(places_dict)
+        })
+
+
+        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)

@@ -20,9 +20,9 @@ MODE = "prod"
 # PATH_CONFIG = os.getcwd() + "/config/"
 # MODE = "dev"
 # #3 real dev (for server test on ha real)
-SERVER_URL = "https://improved-liger-tops.ngrok-free.app"
-PATH_CONFIG = "/config/"
-MODE = "dev_ha_real"
+# SERVER_URL = "https://improved-liger-tops.ngrok-free.app"
+# PATH_CONFIG = "/config/"
+# MODE = "dev_ha_real"
 # common
 PATH = PATH_CONFIG + "person_javis_v2.json"
 FOLDER_PERSON_LOG = PATH_CONFIG + "timesheet/"

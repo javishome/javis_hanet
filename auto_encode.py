@@ -46,7 +46,7 @@ def encode_py_files(build_dir):
         print(f"✅ Encode successful: {result.stdout}")
 
 def check_encoded_files():
-    expected_files = ["__init__.pyc", "const.pyc", "api.pyc"]
+    expected_files = ["__init__.pyc", "const.pyc", "utils.pyc"]
     for file in expected_files:
         if os.path.exists(file):
             print(f"✅ Found encoded file: {file}")

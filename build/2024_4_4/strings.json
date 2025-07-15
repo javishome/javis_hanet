@@ -11,6 +11,13 @@
         },
         "description": "Chọn cloud.",
         "title": "Chọn cloud."
+      },
+      "select_places": {
+        "data": {
+          "selected_places": "Chọn các địa điểm"
+        },
+        "description": "Chọn các địa điểm bạn muốn sử dụng.",
+        "title": "Chọn địa điểm"
       }
     },
     "abort": {
@@ -23,13 +30,11 @@
     },
     "step": {
       "init": {
-        "title": "Manage Repos",
         "data": {
-          "repos": "Existing Repos: Uncheck any repos you want to remove.",
-          "path": "New Repo: Path to the repository e.g. home-assistant-core",
-          "name": "New Repo: Name of the sensor."
+          "selected_places": "Chọn các địa điểm"
         },
-        "description": "Remove existing repos or add a new repo."
+        "description": "Chọn các địa điểm bạn muốn sử dụng.",
+        "title": "Chọn địa điểm"
       }
     }
   }
