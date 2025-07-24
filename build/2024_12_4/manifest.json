@@ -12,5 +12,5 @@
     "iot_class": "cloud_polling",
     "requirements": [],
     "zeroconf": [],
-    "version": "4"
+    "version": "7"
 }
