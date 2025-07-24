@@ -323,6 +323,7 @@ class Services:
     async def check_faceid_group_sensor(self, call: ServiceCall):
         """Handle the check faceid group sensor service call."""
         await handle_person_data(self.hass)
+        return {"status": "ok", "message": "FaceID group sensor checked and updated."}
 
     async def change_face_log_name(self, call: ServiceCall):
         secret_key = call.data.get("secret_key")
