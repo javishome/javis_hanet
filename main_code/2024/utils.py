@@ -6,6 +6,8 @@ import logging
 import uuid
 import aiohttp
 from datetime import datetime
+import yaml
+import traceback
 
 LOGGER = logging.getLogger(__name__)
 
@@ -89,3 +91,21 @@ def get_mac():
     mac_dec = int(mac, 16)
     return mac_dec
 
+def yaml2dict(filename):
+    try:
+        exist = os.path.exists(filename)
+        if not exist:
+            f = open(filename, 'w+')
+            f.close()
+        file = open(filename, 'r', encoding='utf8')
+        res = yaml.load(file, Loader=yaml.FullLoader)
+        file.close()
+        return res
+    except Exception as e:
+        LOGGER.error(f"Error loading YAML file {filename}: {e}")
+        LOGGER.error(traceback.format_exc())
+        return {}
+    
+def dict2yaml(dict_, filename):
+    with open(filename, 'w', encoding='utf-8') as outfile:
+        yaml.dump(dict_, outfile, default_flow_style=False, allow_unicode=True)
