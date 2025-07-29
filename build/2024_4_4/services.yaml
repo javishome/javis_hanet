@@ -19,3 +19,40 @@ push_to_qcd:
       required: true
       selector:
         text:
+
+update_period:
+  name: Update period
+  description: Update period
+  fields:
+    person_id:
+      name: Person ID
+      description: Person ID
+      required: true
+      selector:
+        text:
+    start_time:
+      name: Start time
+      description: Start time
+      required: true
+      selector:
+        date:
+    end_time:
+      name: End time
+      description: End time
+      required: true
+      selector:
+        date:
+
+delete_period:
+  name: Delete period
+  description: Delete period
+  fields:
+    person_id:
+      name: Person ID
+      description: Person ID
+      required: true
+      selector:
+        text:
+check_faceid_group_sensor:
+  name: Check FaceID Group Sensor
+  description: Check FaceID Group Sensor
