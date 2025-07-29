@@ -372,8 +372,13 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
         places_dict = {
             str(place["place_id"]): place["place_name"] for place in self.places_info
         }
+        default_selected_places = [
+            str(place["place_id"]) for place in data.get("selected_places", [])
+        ]
+        
+        # Tạo schema với default value
         schema = vol.Schema({
-            vol.Required("selected_places"): cv.multi_select(places_dict)
+            vol.Required("selected_places", default=default_selected_places): cv.multi_select(places_dict)
         })
 
 
