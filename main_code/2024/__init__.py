@@ -20,7 +20,7 @@ from datetime import timedelta
 from homeassistant.helpers.event import async_track_point_in_time
 import yaml
 import traceback
-
+import pytz
 LOGGER = logging.getLogger(__name__)
 
 __all__ = ["DOMAIN"]
@@ -173,7 +173,12 @@ async def handle_person_data(hass: HomeAssistant):
     if not persons:
         return
 
-    now = datetime.now()
+    # Define timezone for Hanoi
+    hanoi_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+    LOGGER.info(f"Current time in Hanoi: {datetime.now(hanoi_tz)}")
+
+    now_in_hanoi = datetime.now(hanoi_tz)
+
 
     for item in persons:
         start_str = item.get("start_time")
@@ -189,7 +194,7 @@ async def handle_person_data(hass: HomeAssistant):
 
         # Điều kiện giữ lại người dùng là từ ngày bắt đầu tới trước ngày kết thúc
         if start_time and end_time:
-            if start_time <= now < end_time:
+            if start_time <= now_in_hanoi < end_time:
                 continue
 
             LOGGER.info(f"Removing person {person_id} with start_time {start_str} and end_time {end_str} as it is not in the valid period.")
