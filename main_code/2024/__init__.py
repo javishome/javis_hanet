@@ -26,6 +26,7 @@ LOGGER = logging.getLogger(__name__)
 __all__ = ["DOMAIN"]
 
 
+HANOI_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 def setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the TTLock component."""
     if is_new_version():
@@ -174,10 +175,10 @@ async def handle_person_data(hass: HomeAssistant):
         return
 
     # Define timezone for Hanoi
-    hanoi_tz = pytz.timezone('Asia/Ho_Chi_Minh')
-    LOGGER.info(f"Current time in Hanoi: {datetime.now(hanoi_tz)}")
 
-    now_in_hanoi = datetime.now(hanoi_tz)
+    now_in_hanoi = datetime.now(HANOI_TZ)
+    now_in_hanoi_naive = now_in_hanoi.replace(tzinfo=None)
+    LOGGER.info(f"Current time in Hanoi: {now_in_hanoi_naive}")
 
 
     for item in persons:
@@ -194,7 +195,7 @@ async def handle_person_data(hass: HomeAssistant):
 
         # Điều kiện giữ lại người dùng là từ ngày bắt đầu tới trước ngày kết thúc
         if start_time and end_time:
-            if start_time <= now_in_hanoi < end_time:
+            if start_time <= now_in_hanoi_naive < end_time:
                 continue
 
             LOGGER.info(f"Removing person {person_id} with start_time {start_str} and end_time {end_str} as it is not in the valid period.")
