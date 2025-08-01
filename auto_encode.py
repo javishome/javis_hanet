@@ -74,7 +74,7 @@ def main():
         return
     print(f"🔄 Current Python version: {current_version_str}")
     remove_old_build(build_dir)
-    update_manifest_version(main_code_dir)
+    # update_manifest_version(main_code_dir)
     copy_main_code_to_build(build_dir,main_code_dir)
 
     encode_py_files(build_dir)

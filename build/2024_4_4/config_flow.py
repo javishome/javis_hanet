@@ -305,6 +305,10 @@ class HanetFlowHandler(
         """Handle a flow initialized by the user."""
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
+        # Hủy flow cũ nếu có
+        in_progress = self.hass.config_entries.flow.async_progress_by_handler(self.handler)
+        for flow in in_progress:
+            self.hass.config_entries.flow.async_abort(flow["flow_id"])
 
         return await self.async_step_pick_implementation()
     
