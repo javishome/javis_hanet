@@ -37,13 +37,26 @@ def write_data_log_qcd(data):
         txt_file.write(str(data) + "\n")
 
 
-async def change_file_name(secret_key):
+async def change_file_name(secret_key, date_str=None):
     # change name
-    if os.path.exists(PATH_PERSON_LOG) == False:
-        return
-    new_file_name = datetime.now().strftime("%y%m%d") + ".log"
+    if not date_str:
+        if os.path.exists(PATH_PERSON_LOG) == False:
+            return
+        new_file_name = datetime.now().strftime("%y%m%d") + ".log"
+        os.rename(PATH_PERSON_LOG, new_file_path)
+    else:
+        try:
+            datetime.strptime(date_str, "%Y-%m-%d")
+            # convert to "%y%m%d"
+            new_file_name = datetime.strptime(date_str, "%Y-%m-%d").strftime("%y%m%d") + ".log"
+        except ValueError:
+            LOGGER.error("Invalid date format. Use YYYY-MM-DD.")
+            return
     new_file_path = FOLDER_PERSON_LOG + new_file_name
-    os.rename(PATH_PERSON_LOG, new_file_path)
+    if not os.path.exists(new_file_path):
+        LOGGER.error(f"File {new_file_path} does not exist.")
+        return False
+    
 
     qcd_url = "https://qcd.arrow-tech.vn/api/v2/resum-timesheet"
     headers = {
@@ -66,6 +79,9 @@ async def change_file_name(secret_key):
             if response.status != 200:
                 LOGGER.error(info)
                 return False
+            else:
+                LOGGER.info(f"Successfully sent data to QCD: {info}")
+                return True
 
 
 def get_host(add_url):

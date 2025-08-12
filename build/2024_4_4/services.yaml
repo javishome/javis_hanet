@@ -19,6 +19,12 @@ push_to_qcd:
       required: true
       selector:
         text:
+    date:
+      name: Date
+      description: Date to specify which log file to change
+      required: false
+      selector:
+        date:
 
 update_period:
   name: Update period
@@ -56,3 +62,7 @@ delete_period:
 check_faceid_group_sensor:
   name: Check FaceID Group Sensor
   description: Check FaceID Group Sensor
+
+sync_periods:
+  name: Sync Periods
+  description: Sync periods with the server
