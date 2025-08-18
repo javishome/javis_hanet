@@ -241,7 +241,7 @@ async def restart_mqtt(hass: HomeAssistant):
                 LOGGER.error(f"Failed to reload MQTT service: {response.status}")
 
 async def update_period_api(start_time, end_time, person_id):
-    url = f"{HRM_URL}/api/v2/delete_period"
+    url = f"{HRM_URL}/api/v2/update_period"
     headers = {
         "Content-Type": "application/json",
         "timesheet_secret_key": TIMESHEET_SECRET_KEY
@@ -268,7 +268,7 @@ async def delete_period_api(person_id):
         "person_id": person_id
     }
     async with aiohttp.ClientSession() as session:
-        async with session.post(url, headers=headers, json=data) as response:
+        async with session.delete(url, headers=headers, json=data) as response:
             if response.status == 200:
                 LOGGER.info(f"Period deleted successfully for person_id {person_id}")
             else:
