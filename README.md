@@ -2,9 +2,8 @@
 - 2024.4.4
 - 2024.7.4
 
-# 01/08/2025: Update 2024_12_4_v1.0.2, 2024_4_4_v1.0.2
-thêm chức năng chọn địa điểm, thêm start_time, end_time cho person_id
-# 12/08/2025: Update 2024_12_4_v1.0.3, 2024_4_4_v1.0.3
-Cập nhập chức năng chỉnh sửa start_time, end_time, thêm service đồng bộ dữ liệu với hrm
-# 18/08/2025: Update 2024_12_4_v1.0.4, 2024_4_4_v1.0.4
-Fix lỗi chức năng đồng bộ dữ liệu với hrm
+# 24/08/2025: Update 2024_12_4_v1.0.2, 2024_4_4_v1.0.2
+- Thêm chức năng chọn địa điểm.
+- Thêm start_time, end_time cho person_id
+- Thêm service đồng bộ dữ liệu start_time, end_time với hrm
+

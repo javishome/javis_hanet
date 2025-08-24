@@ -10,7 +10,6 @@ AUTHORIZE_URL = "https://oauth.hanet.com/oauth2/authorize"
 SVC_WRITE_PERSON = "write_person"
 SVC_PUSH_TO_QCD = "push_to_qcd"
 SVC_UPDATE_PERIOD = "update_period"
-SVC_DELETE_PERIOD = "delete_period"
 SVC_CHECK_FACEID_GROUP_SENSOR = "check_faceid_group_sensor"
 SVC_SYNC_PERIODS = "sync_periods"
 

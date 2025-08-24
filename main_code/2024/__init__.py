@@ -199,23 +199,21 @@ async def handle_person_data(hass: HomeAssistant):
     # Define timezone for Hanoi
 
     now_in_hanoi = datetime.now(HANOI_TZ)
-    now_in_hanoi_naive = now_in_hanoi.replace(tzinfo=None)
+    now_in_hanoi_naive = now_in_hanoi.replace(tzinfo=None).date()
     LOGGER.info(f"Current time in Hanoi: {now_in_hanoi_naive}")
     expired_pids = []
     for item in persons:
-        start_str = item.get("start_time")
         end_str = item.get("end_time")
         person_id = item.get("person_id")
 
         try:
-            start_time = datetime.strptime(start_str, "%Y-%m-%d") if start_str else None
-            end_time = datetime.strptime(end_str, "%Y-%m-%d") if end_str else None
+            end_time = datetime.strptime(end_str, "%Y-%m-%d").date() if end_str else None
         except ValueError as e:
             LOGGER.warning(f"Invalid datetime format in item {item}: {e}")
             continue
 
         # Điều kiện giữ lại người dùng là từ ngày bắt đầu tới trước ngày kết thúc
-        if start_time and end_time:
+        if end_time:
             if  now_in_hanoi_naive >= end_time:
                 expired_pids.append(person_id)
 
@@ -254,25 +252,10 @@ async def update_period_api(start_time, end_time, person_id):
     async with aiohttp.ClientSession() as session:
         async with session.post(url, headers=headers, json=data) as response:
             if response.status == 200:
-                LOGGER.info(f"Period updated successfully for person_id {person_id}")
+                LOGGER.info(f"Period updated successfully for person_id {person_id} with start_time {start_time} and end_time {end_time}")
             else:
                 LOGGER.error(f"Failed to update period: {response.status}")
 
-async def delete_period_api(person_id):
-    url = f"{HRM_URL}/api/v2/delete_period"
-    headers = {
-        "Content-Type": "application/json",
-        "timesheet_secret_key": TIMESHEET_SECRET_KEY
-    }
-    data = {
-        "person_id": person_id
-    }
-    async with aiohttp.ClientSession() as session:
-        async with session.delete(url, headers=headers, json=data) as response:
-            if response.status == 200:
-                LOGGER.info(f"Period deleted successfully for person_id {person_id}")
-            else:
-                LOGGER.error(f"Failed to delete period: {response.status}")
 
 async def sync_periods_api(hass: HomeAssistant):
     url = f"{HRM_URL}/api/v2/sync_periods"
@@ -286,7 +269,7 @@ async def sync_periods_api(hass: HomeAssistant):
         "person_id": p.get("person_id"),
         "start_time": p.get("start_time"),
         "end_time": p.get("end_time")
-    } for p in person if p.get("person_id") and p.get("start_time") and p.get("end_time")]
+    } for p in person if p.get("person_id")]
     async with aiohttp.ClientSession() as session:
         async with session.post(url, headers=headers, json=data) as response:
             if response.status == 200:
@@ -296,9 +279,25 @@ async def sync_periods_api(hass: HomeAssistant):
                 LOGGER.error(f"Failed to sync periods: {response.status}")
                 return False
 
-                
-
-            
+def flexible_date(value):
+    """Chấp nhận None, chuỗi rỗng, khoảng trắng hoặc date hợp lệ."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        val = value.strip()
+        if val == "":
+            return None
+        try:
+            return cv.date(val)  # parse chuỗi thành date hợp lệ
+        except Exception:
+            raise vol.Invalid(f"Invalid date: {value}")
+    # Nếu đã là datetime/date
+    try:
+        return cv.date(value)
+    except Exception:
+        raise vol.Invalid(f"Invalid date: {value}")
+    
+                 
 class Services:
     """Wraps service handlers."""
 
@@ -339,20 +338,8 @@ class Services:
             self.update_period,
             schema=vol.Schema(
                 {
-                    vol.Required("start_time"): cv.date,
-                    vol.Required("end_time"): cv.date,
-                    vol.Required("person_id"): cv.string,
-                }
-            ),
-            supports_response=SupportsResponse.OPTIONAL,
-        )
-
-        self.hass.services.async_register(
-            DOMAIN,
-            SVC_DELETE_PERIOD,
-            self.delete_period,
-            schema=vol.Schema(
-                {
+                    vol.Optional("start_time"): flexible_date,
+                    vol.Optional("end_time"): flexible_date,
                     vol.Required("person_id"): cv.string,
                 }
             ),
@@ -407,20 +394,8 @@ class Services:
             self.update_period,
             schema=vol.Schema(
                 {
-                    vol.Required("start_time"): cv.date,
-                    vol.Required("end_time"): cv.date,
-                    vol.Required("person_id"): cv.string,
-                }
-            ),
-            supports_response=SupportsResponse.OPTIONAL,
-        )
-
-        self.hass.services.register(
-            DOMAIN,
-            SVC_DELETE_PERIOD,
-            self.delete_period,
-            schema=vol.Schema(
-                {
+                    vol.Optional("start_time"): flexible_date,
+                    vol.Optional("end_time"): flexible_date,
                     vol.Required("person_id"): cv.string,
                 }
             ),
@@ -480,11 +455,17 @@ class Services:
         end_time = call.data.get("end_time")
         person_id = call.data.get("person_id")
         #nếu start_time >= end_time thì trả về lỗi
-        if start_time >= end_time:
-            return {"status": "error", "message": "Start time must be less than end time"}
+        # if start_time >= end_time:
+        #     return {"status": "error", "message": "Start time must be less than end time"}
         #conver start_time and end_time to string
-        start_time = start_time.strftime("%Y-%m-%d")
-        end_time = end_time.strftime("%Y-%m-%d")
+        start_time_str = ""
+        if start_time:
+            start_time_str = start_time.strftime("%Y-%m-%d")
+        end_time_str = ""
+        if end_time:
+            end_time_str = end_time.strftime("%Y-%m-%d")
+        # start_time = start_time.strftime("%Y-%m-%d")
+        # end_time = end_time.strftime("%Y-%m-%d")
         
 
         # read file person_javis_v2.json
@@ -496,41 +477,22 @@ class Services:
             return {"status": "error", "message": f"Person with ID {person_id} not found"}
         else:
             # update start_time and end_time
-            person["start_time"] = start_time
-            person["end_time"] = end_time
+            person["start_time"] = start_time_str
+            person["end_time"] = end_time_str
             # save data to file
             await self.hass.async_add_executor_job(save_json_file, PATH, data)
             # kiêm tra xem thời gian hiên tại có nằm trong khoảng thời gian của người dùng không
             now_in_hanoi = datetime.now(HANOI_TZ)
-            now_in_hanoi_naive = now_in_hanoi.replace(tzinfo=None)
-            if now_in_hanoi_naive.strftime("%Y-%m-%d") >= end_time:
-                # remove person_id in face_sensor.yaml
-                await remove_expired_pids_from_face_sensor([person_id], self.hass)
-                await restart_mqtt(self.hass)
-            # update period in HRM
-            await update_period_api(start_time, end_time, person_id)
-        return {"status": "ok", "message": f"Updated period for person {person_id} from {start_time} to {end_time}"}
+            now_in_hanoi_naive = now_in_hanoi.replace(tzinfo=None).date()
+            if end_time:
+                if now_in_hanoi_naive >= end_time:
+                    # remove person_id in face_sensor.yaml
+                    await remove_expired_pids_from_face_sensor([person_id], self.hass)
+                    await restart_mqtt(self.hass)
+                # update period in HRM
+            await update_period_api(start_time_str, end_time_str, person_id)
+        return {"status": "ok", "message": f"Updated period"}
 
-            
-    async def delete_period(self, call: ServiceCall):
-        """Handle the delete period service call."""
-        # Implement the logic for deleting the period
-        person_id = call.data.get("person_id")
-        # read file person_javis_v2.json
-        data = await self.hass.async_add_executor_job(load_json_file, PATH)
-        persons = data.get("person", [])
-        # find person with person_id
-        person = next((p for p in persons if p.get("person_id") == person_id), None)
-        if not person:
-            return {"status": "error", "message": f"Person with ID {person_id} not found"}
-        else:
-            person["start_time"] = ""
-            person["end_time"] = ""
-            # save data to file
-            await self.hass.async_add_executor_job(save_json_file, PATH, data)
-            # delete period in HRM
-            await delete_period_api(person_id)
-            return {"status": "ok", "message": f"Deleted period for person {person_id}"}
 
     async def sync_periods(self, call: ServiceCall):
         """Handle the sync periods service call."""
