@@ -35,33 +35,19 @@ update_period:
       description: Person ID
       required: true
       selector:
-        text:
+        text: {}
     start_time:
       name: Start time
-      description: Start time
-      required: true
+      description: Start time (optional)
+      required: false
       selector:
-        date:
+        text: {}
     end_time:
       name: End time
-      description: End time
-      required: true
+      description: End time (optional)
+      required: false
       selector:
-        date:
-
-delete_period:
-  name: Delete period
-  description: Delete period
-  fields:
-    person_id:
-      name: Person ID
-      description: Person ID
-      required: true
-      selector:
-        text:
-check_faceid_group_sensor:
-  name: Check FaceID Group Sensor
-  description: Check FaceID Group Sensor
+        text: {}
 
 sync_periods:
   name: Sync Periods
