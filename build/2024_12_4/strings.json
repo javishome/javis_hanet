@@ -40,6 +40,9 @@
         "description": "Chọn các địa điểm bạn muốn sử dụng.",
         "title": "Chọn địa điểm"
       }
-    }
-  }
+    },
+    "abort": {
+      "options_updated": "Cài đặt đã được cập nhật."
+    } 
+}
 }
