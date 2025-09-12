@@ -39,6 +39,17 @@ AUTH_SCHEMA = vol.Schema(
                 )}
 )
 
+ACCOUNT_TYPE_SCHEMA = vol.Schema(
+    {
+        vol.Required("account_type"): vol.In(
+            {
+                "hanet": "Hanet Account",
+                "ai_box": "AI Box Account",
+            }
+        )
+    }
+)
+
 class HanetFlowHandler(
     config_entry_oauth2_flow.AbstractOAuth2FlowHandler, domain=DOMAIN
 ):
@@ -56,7 +67,6 @@ class HanetFlowHandler(
     async def async_oauth_create_entry(self, data: dict[str, Any]) -> ConfigFlowResult:
         """Create an entry for Hanet with user-selected places."""
         await self.async_set_unique_id(data["token"]["userID"])
-
         # Gọi API lấy places
         session = async_get_clientsession(self.hass)
         self.logger.info("data: %s", data)
@@ -310,13 +320,78 @@ class HanetFlowHandler(
         for flow in in_progress:
             self.hass.config_entries.flow.async_abort(flow["flow_id"])
 
-        return await self.async_step_pick_implementation()
+        return await self.async_step_account_type()
+    
+    async def async_step_account_type(self, user_input=None):
+        """Choose between Hanet account or AI Box account."""
+        errors = {}
+
+        if user_input is not None:
+            self.account_type = user_input["account_type"]
+            if self.account_type == "hanet":
+                return await self.async_step_pick_implementation()
+            elif self.account_type == "ai_box":
+                return await self.async_step_ai_box()
+
+        return self.async_show_form(
+            step_id="account_type",
+            data_schema=ACCOUNT_TYPE_SCHEMA,
+            errors=errors,
+        )
+
+    async def async_step_ai_box(self, user_input=None):
+        """Handle AI Box setup (manual IP/Port/Key)."""
+        errors = {}
+
+        schema = vol.Schema({
+            vol.Required("ip"): str,
+            vol.Required("port", default=8080): int,
+            vol.Required("key", default="key"): str,
+        })
+
+        if user_input is not None:
+            ip = user_input["ip"]
+            port = user_input["port"]
+            key = user_input["key"]
+
+            # Kiểm tra kết nối
+            url = f"http://{ip}:{port}/api/Profile"
+            headers = {
+                "Cookie": f"key={key}"
+            }
+            session = async_get_clientsession(self.hass)
+            try:
+                async with session.get(url, headers=headers, timeout=10) as resp:
+                    if resp.status == 200:
+                        # OK → tạo config entry
+                        return self.async_create_entry(
+                            title=f"AI Box ({ip})",
+                            data={
+                                "account_type": "ai_box",
+                                "ip": ip,
+                                "port": port,
+                                "key": key,
+                            },
+                        )
+                    else:
+                        errors["base"] = "cannot_connect"
+            except Exception as e:
+                self.logger.error("Error connecting to AI Box: %s", e)
+                errors["base"] = "cannot_connect"
+
+        return self.async_show_form(
+            step_id="ai_box",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders = {"ip": "192.168.168.35"}
+        )
     
     @staticmethod
     def async_get_options_flow(config_entry: config_entries.ConfigEntry):
         """Return the options flow handler for this config entry."""
         return HanetOptionsFlow(config_entry)
 
+    
 class HanetOptionsFlow(config_entries.OptionsFlow):
     """Handle options for WebSocket Component."""
 
@@ -331,6 +406,9 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
         # Giá trị mặc định lấy từ config_entry.data nếu options chưa có
         data = {**self.config_entry.data, **self.config_entry.options}
         self.add_url = data.get("url", HOST3)  # Lấy URL từ options hoặc mặc định HOST3
+        account_type = data.get("account_type")
+        if account_type == "ai_box":
+            return self.async_abort(reason="no_options")
         
         if user_input is not None:
             # Nếu user nhập thông tin, validate

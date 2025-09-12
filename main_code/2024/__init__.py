@@ -39,7 +39,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Spotify from a config entry."""
     try:
         start_time = time.time()
-        await update_data(hass, entry)
+        account_type = entry.data.get("account_type")
+        is_updated = False
+        if account_type == "ai_box":
+            is_updated = await update_data_ai_box(hass, entry)
+        else:
+            is_updated = await update_data_hanet(hass, entry)
+        if not is_updated:
+            LOGGER.error("Failed to update data")
+            return False
         LOGGER.info(f"Data updated in {time.time() - start_time:.2f} seconds")
         hass.data.setdefault(DOMAIN, {})["entry"] = entry
     except Exception as e:
@@ -60,9 +68,41 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 async def async_get_options_flow(config_entry):
+    account_type = config_entry.data.get("account_type")
+    LOGGER.info(f"Getting options flow for account type: {account_type}")
     return HanetOptionsFlow(config_entry)
 
-async def update_data(hass: HomeAssistant, entry):
+async def update_data_ai_box(hass, entry):
+    ip = entry.data.get("ip")
+    port = entry.data.get("port")
+    key = entry.data.get("key")
+    url = f"http://{ip}:{port}/api/Profile"
+    headers = {
+        "Cookie": f"key={key}"
+    }
+    info = {"person": []}
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=headers) as response:
+            if response.status != 200:
+                LOGGER.error(f"Failed to fetch data from AI Box: {response.status}")
+                return False
+            data = await response.json()
+            for person in data:
+                new_person = {
+                    "person_id": str(person.get("id")),
+                    "person_type": "",
+                    "image": "",
+                    "person_name": person.get("name"),
+                    "place_id": "",
+                    "place_name": "",
+                    }
+                info["person"].append(new_person)
+    if info:
+        await hass.async_add_executor_job(write_data, info)
+    return True
+
+async def update_data_hanet(hass: HomeAssistant, entry):
     """Update data for the config entry."""
     token = entry.data.get("token")
     places = entry.options.get("selected_places", entry.data.get("selected_places", []))
@@ -82,18 +122,9 @@ async def update_data(hass: HomeAssistant, entry):
             info = await response.json()
             # add start_time and end_time to info
             if info and isinstance(info.get("person"), list):
-                # test get person from data_time_mul.json
-                #TODO: xóa sau khi cập nhật api
-                # info = await hass.async_add_executor_job(load_json_file, DATA_TIME_MUL_PATH)
-                # LOGGER.info(info)
                 for person in info["person"]:
                     pid = str(person.get("person_id"))
                     #pop start_time and end_time if they exist
-                    #TODO: xóa sau khi cập nhật api
-                    if "start_time" in person:
-                        person.pop("start_time", None)
-                    if "end_time" in person:
-                        person.pop("end_time", None)
                     old_p = old_by_id.get(pid)
                     if old_p:
                         # giữ nguyên giá trị cũ (nếu có), tránh overwrite bằng None
@@ -108,8 +139,6 @@ async def update_data(hass: HomeAssistant, entry):
 
     if info:
         await hass.async_add_executor_job(write_data, info)
-    
-
     return True
 
 def remove_person_id_in_value_template(person_id_to_remove, value_template_str):

@@ -2,7 +2,10 @@
   "config": {
     "error": {
       "auth": "Mã thông báo xác thực được cung cấp không hợp lệ.",
-      "invalid_path": "Đường dẫn được cung cấp không hợp lệ. Phải ở định dạng `user/repo-name`."
+      "invalid_path": "Đường dẫn được cung cấp không hợp lệ. Phải ở định dạng `user/repo-name`.",
+      "cannot_connect": "Không thể kết nối đến thiết bị. Vui lòng kiểm tra lại địa chỉ IP, cổng và khóa.",
+      "no_place_selected": "Không có địa điểm nào được chọn.",
+      "reauth_failed": "Xác thực lại không thành công, vui lòng kiểm tra mã thông báo của bạn."
     },
     "step": {
       "pick_implementation": {
@@ -18,10 +21,28 @@
         },
         "description": "Chọn các địa điểm bạn muốn sử dụng.",
         "title": "Chọn địa điểm"
+      },
+      "account_type": {
+        "data": {
+          "account_type": "Chọn loại tài khoản"
+        },
+        "description": "Chọn loại tài khoản bạn muốn sử dụng.",
+        "title": "Chọn loại tài khoản"
       }
     },
     "abort": {
-      "single_instance_allowed": "Chỉ cho phép một tài khoản đăng nhập một lúc. Vui lòng xóa tài khoản hiện tại trước khi thêm tài khoản mới."
+      "single_instance_allowed": "Chỉ cho phép một tài khoản đăng nhập một lúc. Vui lòng xóa tài khoản hiện tại trước khi thêm tài khoản mới.",
+      "fetch_places_info_failed": "Không thể lấy thông tin địa điểm. Vui lòng kiểm tra lại mã thông báo của bạn.",
+      "places_info_not_found": "Không tìm thấy thông tin địa điểm nào liên kết với tài khoản của bạn.",
+      "no_places_info_available": "Không có thông tin địa điểm nào có sẵn.",
+      "oauth_timeout": "Hết thời gian chờ OAuth, vui lòng thử lại.",
+      "oauth_failed": "Quá trình OAuth không thành công, vui lòng thử lại.",
+      "oauth_error": "Đã xảy ra lỗi trong quá trình OAuth, vui lòng thử lại.",
+      "missing_credentials": "Thiếu thông tin đăng nhập cần thiết để hoàn tất quá trình xác thực.",
+      "missing_configuration": "Thiếu cấu hình cần thiết để hoàn tất quá trình xác thực.",
+      "authorize_url_timeout": "Hết thời gian chờ URL ủy quyền, vui lòng thử lại.",
+      "no_url_available": "Không có URL nào có sẵn để hoàn tất quá trình xác thực."
+      
     },
     "flow_aborted": {
       "flow_aborted_reload": "Bạn đã tải lại trang khi chưa hoàn tất cấu hình. Vui lòng bắt đầu lại.",
@@ -30,7 +51,7 @@
   },
   "options": {
     "error": {
-      "invalid_path": "The path provided is not valid. Should be in the format `user/repo-name` and should be a valid github repository."
+      "invalid_path": "Đường dẫn được cung cấp không hợp lệ. Phải ở định dạng `user/repo-name`."
     },
     "step": {
       "init": {
@@ -42,7 +63,8 @@
       }
     },
     "abort": {
-      "options_updated": "Cài đặt đã được cập nhật."
+      "options_updated": "Cài đặt đã được cập nhật.",
+      "no_options": "Không có tùy chọn nào để cấu hình cho loại tài khoản này."
     } 
 }
 }
