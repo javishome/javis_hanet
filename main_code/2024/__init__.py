@@ -91,10 +91,10 @@ async def update_data_ai_box(hass, entry):
             for person in data:
                 new_person = {
                     "person_id": str(person.get("id")),
-                    "person_type": "",
+                    "person_type": None,
                     "image": "",
                     "person_name": person.get("name"),
-                    "place_id": "",
+                    "place_id": None,
                     "place_name": "",
                     }
                 info["person"].append(new_person)

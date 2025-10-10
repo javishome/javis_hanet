@@ -10,3 +10,6 @@
 # 12/09/2025: Update 2024_12_4_v1.0.3, 2024_4_4_v1.0.3
 - Hỗ trợ tài khoản Ai Box
 
+# 10/10/2025: Update 2024_12_4_v1.0.4, 2024_4_4_v1.0.4
+- Fix lỗi không đồng bộ dữ liệu hanet với ai box
+
