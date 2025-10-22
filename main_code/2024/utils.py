@@ -43,16 +43,14 @@ async def change_file_name(secret_key, date_str=None):
         if os.path.exists(PATH_PERSON_LOG) == False:
             return
         new_file_name = datetime.now().strftime("%y%m%d") + ".log"
-        os.rename(PATH_PERSON_LOG, new_file_path)
     else:
         try:
-            datetime.strptime(date_str, "%Y-%m-%d")
-            # convert to "%y%m%d"
             new_file_name = datetime.strptime(date_str, "%Y-%m-%d").strftime("%y%m%d") + ".log"
         except ValueError:
             LOGGER.error("Invalid date format. Use YYYY-MM-DD.")
             return
     new_file_path = FOLDER_PERSON_LOG + new_file_name
+    os.rename(PATH_PERSON_LOG, new_file_path)
     if not os.path.exists(new_file_path):
         LOGGER.error(f"File {new_file_path} does not exist.")
         return False

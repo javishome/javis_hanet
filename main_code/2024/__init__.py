@@ -467,6 +467,7 @@ class Services:
 
     async def change_face_log_name(self, call: ServiceCall):
         secret_key = call.data.get("secret_key")
+        date_str = None
         date = call.data.get("date")
         if date:
             date_str = date.strftime("%Y-%m-%d")
