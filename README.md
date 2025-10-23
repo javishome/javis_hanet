@@ -15,3 +15,6 @@
 
 # 22/10/2025: Update 2024_12_4_v1.0.5, 2024_4_4_v1.0.5
 - Fix lỗi đồng bộ dữ liệu lên qcd
+
+# 23/10/2025: Update 2024_12_4_v1.0.6, 2024_4_4_v1.0.6
+- Update id person for ai box

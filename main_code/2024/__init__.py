@@ -72,6 +72,7 @@ async def async_get_options_flow(config_entry):
     LOGGER.info(f"Getting options flow for account type: {account_type}")
     return HanetOptionsFlow(config_entry)
 
+
 async def update_data_ai_box(hass, entry):
     ip = entry.data.get("ip")
     port = entry.data.get("port")
@@ -90,7 +91,7 @@ async def update_data_ai_box(hass, entry):
             data = await response.json()
             for person in data:
                 new_person = {
-                    "person_id": str(person.get("id")),
+                    "person_id": str(person.get("uuid")),
                     "person_type": None,
                     "image": "",
                     "person_name": person.get("name"),
