@@ -152,7 +152,7 @@ def encode_with_python(py_ver: str, build_dir: str):
 
 
 def check_encoded_files(build_dir):
-    expected_files = ["__init__.pyc", "const.pyc", "utils.pyc"]
+    expected_files = ["__init__.pyc", "const.pyc", "utils.pyc", "hrm_api.pyc"]
     all_ok = True
     for file in expected_files:
         path = os.path.join(build_dir, file)
