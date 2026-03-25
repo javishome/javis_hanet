@@ -1,0 +1,83 @@
+POST
+/oauth/token
+Lấy access token cho ứng dụng ngoài bằng OAuth 2.0 Client Credentials.
+
+Scope yêu cầu: Không yêu cầu scope bổ sung
+Ví dụ curl
+curl -X POST "https://hrm.javishome.vn/api/external/oauth/token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "grant_type": "client_credentials",
+    "client_id": "<client_id>",
+    "client_secret": "<client_secret>",
+    "scope": "employees:read auto_open:read"
+  }'
+Request body mẫu
+{
+  "grant_type": "client_credentials",
+  "client_id": "<client_id>",
+  "client_secret": "<client_secret>",
+  "scope": "employees:read auto_open:read"
+}
+Response mẫu
+{
+  "access_token": "<access_token>",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "scope": "employees:read auto_open:read"
+}
+
+GET
+/hc/auto-open-queue?place_id=101&limit=50
+HC lấy các bản ghi chờ đồng bộ theo địa điểm.
+
+Scope yêu cầu: HC queue đọc (hc.queue:read)
+Ví dụ curl
+curl "https://hrm.javishome.vn/api/external/hc/auto-open-queue?place_id=101&limit=50" \
+  -H "Authorization: Bearer <access_token>"
+Response mẫu
+[
+  {
+    "id": 1,
+    "person_id": "face_001",
+    "place_id": 101,
+    "start_time": "2026-03-18",
+    "end_time": "2026-03-31",
+    "action": "upsert",
+    "status": "leased"
+  }
+]
+
+HC phản hồi kết quả xử lý hàng đợi đồng bộ.
+
+Scope yêu cầu: HC queue ghi (hc.queue:write)
+Ví dụ curl
+curl -X POST "https://hrm.javishome.vn/api/external/hc/auto-open-queue/ack" \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "results": [
+      { "queue_id": 1, "success": true },
+      { "queue_id": 2, "success": false, "error_message": "Local HC processing failed" }
+    ]
+  }'
+Request body mẫu
+{
+  "results": [
+    {
+      "queue_id": 1,
+      "success": true
+    },
+    {
+      "queue_id": 2,
+      "success": false,
+      "error_message": "Local HC processing failed"
+    }
+  ]
+}
+Response mẫu
+{
+  "success": 1,
+  "failed": 1,
+  "ignored": 0
+}

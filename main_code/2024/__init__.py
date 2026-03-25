@@ -25,6 +25,9 @@ LOGGER = logging.getLogger(__name__)
 
 __all__ = ["DOMAIN"]
 
+from datetime import timedelta
+from homeassistant.helpers.event import async_track_time_interval
+from .hrm_api import HRMClient
 
 HANOI_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 def setup(hass: HomeAssistant, config: dict) -> bool:
@@ -34,6 +37,73 @@ def setup(hass: HomeAssistant, config: dict) -> bool:
     else:
         Services(hass).register_old()
     return True
+
+async def setup_hrm_sync(hass: HomeAssistant, entry: ConfigEntry):
+    # Remove existing listener if any
+    if hass.data.get(DOMAIN, {}).get("hrm_sync_listener"):
+        hass.data[DOMAIN]["hrm_sync_listener"]() # cancel function
+        
+    interval_seconds = hass.data.get(DOMAIN, {}).get("hrm_sync_interval", 30)
+    
+    async def hrm_sync_task(now):
+        client = hass.data.get(DOMAIN, {}).get("hrm_client")
+        if not client: return
+        places = entry.options.get("selected_places", entry.data.get("selected_places", []))
+        if not places: return
+        
+        data_updated = False
+        all_results = []
+        filepath = PATH
+        person_data = await hass.async_add_executor_job(load_json_file, filepath)
+        if not person_data:
+            return
+        persons = person_data.get("person", [])
+        
+        for place_id in places:
+            queue = await client.fetch_queue(place_id=place_id, limit=50)
+            if not queue:
+                continue
+                
+            for item in queue:
+                action = item.get("action")
+                person_id = item.get("person_id")
+                
+                success = False
+                error_message = None
+                try:
+                    if action == "upsert":
+                        person = next((p for p in persons if p.get("person_id") == person_id), None)
+                        if person:
+                            if item.get("start_time"):
+                                person["start_time"] = item.get("start_time")
+                            if item.get("end_time"):
+                                person["end_time"] = item.get("end_time")
+                            data_updated = True
+                            success = True
+                        else:
+                            success = False
+                            error_message = f"Person ID {person_id} not found locally"
+                    else:
+                        success = True 
+                except Exception as e:
+                    success = False
+                    error_message = str(e)
+                
+                ack_item = {"queue_id": item.get("id"), "success": success}
+                if error_message:
+                    ack_item["error_message"] = error_message
+                all_results.append(ack_item)
+                
+        if data_updated:
+            await hass.async_add_executor_job(save_json_file, filepath, person_data)
+            
+        if all_results:
+            await client.ack_queue(all_results)
+            
+    hass.data[DOMAIN]["hrm_sync_listener"] = async_track_time_interval(
+        hass, hrm_sync_task, timedelta(seconds=interval_seconds)
+    )
+    LOGGER.info(f"HRM sync task scheduled with interval {interval_seconds} seconds")
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Spotify from a config entry."""
@@ -50,6 +120,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return False
         LOGGER.info(f"Data updated in {time.time() - start_time:.2f} seconds")
         hass.data.setdefault(DOMAIN, {})["entry"] = entry
+        
+        # HRM Sync Setup
+        hass.data[DOMAIN]["hrm_client"] = HRMClient()
+        hass.data[DOMAIN]["hrm_sync_interval"] = 30 # default 30s
+        await setup_hrm_sync(hass, entry)
     except Exception as e:
         LOGGER.error(f"Error setting up entry: {e}")
         LOGGER.error(traceback.format_exc())
@@ -389,6 +464,18 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
+        self.hass.services.async_register(
+            DOMAIN,
+            SVC_SET_HRM_SYNC_INTERVAL,
+            self.set_hrm_sync_interval,
+            schema=vol.Schema(
+                {
+                    vol.Required("interval"): vol.Coerce(int),
+                }
+            ),
+            supports_response=SupportsResponse.OPTIONAL,
+        )
+
 
     def register_new(self) -> None:
         """Register services for javis_lock integration."""
@@ -443,6 +530,18 @@ class Services:
             DOMAIN,
             SVC_SYNC_PERIODS,
             self.sync_periods,
+            supports_response=SupportsResponse.OPTIONAL,
+        )
+
+        self.hass.services.register(
+            DOMAIN,
+            SVC_SET_HRM_SYNC_INTERVAL,
+            self.set_hrm_sync_interval,
+            schema=vol.Schema(
+                {
+                    vol.Required("interval"): vol.Coerce(int),
+                }
+            ),
             supports_response=SupportsResponse.OPTIONAL,
         )
 
@@ -535,6 +634,19 @@ class Services:
         except Exception as e:
             LOGGER.error(f"Error syncing periods: {e}")
             return {"status": "error", "message": str(e)}
+
+    async def set_hrm_sync_interval(self, call: ServiceCall):
+        """Handle the set HRM sync interval service call."""
+        interval = call.data.get("interval")
+        if interval < 5:
+            return {"status": "error", "message": "Interval must be an integer >= 5"}
+            
+        self.hass.data[DOMAIN]["hrm_sync_interval"] = interval
+        entry = self.hass.data.get(DOMAIN, {}).get("entry")
+        if entry:
+            await setup_hrm_sync(self.hass, entry)
+        
+        return {"status": "ok", "message": f"HRM sync interval set to {interval} seconds"}
 
 
 
