@@ -18,3 +18,6 @@
 
 # 23/10/2025: Update 2024_12_4_v1.0.6, 2024_4_4_v1.0.6
 - Update id person for ai box
+
+# 25/3/2026:  2024_12_4_2, 2024_4_4_2
+- thêm chức năng đồng bộ dữ liệu về từ hrm
