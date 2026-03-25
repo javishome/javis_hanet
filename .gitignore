@@ -47,5 +47,6 @@ Thumbs.db
 *.flv
 *.mov
 *.wmv
-
-
+*.txt
+person_javis_v2.json
+test_api.py

@@ -12,7 +12,12 @@ SVC_PUSH_TO_QCD = "push_to_qcd"
 SVC_UPDATE_PERIOD = "update_period"
 SVC_CHECK_FACEID_GROUP_SENSOR = "check_faceid_group_sensor"
 SVC_SYNC_PERIODS = "sync_periods"
-
+SVC_SET_HRM_SYNC_INTERVAL = "set_hrm_sync_interval"
+HRM_CLIENT_ID = "hrmai_2cdfd0e373882506599ef005"
+HRM_CLIENT_SECRET = "c863a175b1cffa38a42c1f23d555079c974a9b6da341f4bb"
+HRM_TOKEN_URL = "https://hrm.javishome.vn/api/external/oauth/token"
+HRM_QUEUE_URL = "https://hrm.javishome.vn/api/external/hc/auto-open-queue"
+HRM_ACK_URL = "https://hrm.javishome.vn/api/external/hc/auto-open-queue/ack"
 # 1 prod
 SERVER_URL = "https://lock-api."
 PATH_CONFIG = "/config/"
