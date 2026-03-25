@@ -52,3 +52,17 @@ update_period:
 sync_periods:
   name: Sync Periods
   description: Sync periods with the server
+
+set_hrm_sync_interval:
+  name: Set HRM Sync Interval
+  description: Change loop interval (seconds) for auto-syncing HRM queue API.
+  fields:
+    interval:
+      name: Interval (s)
+      description: Polling interval in seconds (minimum 5s)
+      required: true
+      selector:
+        number:
+          min: 5
+          max: 86400
+          mode: box
