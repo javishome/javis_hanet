@@ -29,9 +29,10 @@ class HRMClient:
             async with aiohttp.ClientSession() as session:
                 async with session.post(HRM_TOKEN_URL, json=payload, headers=headers) as response:
                     if response.status == 200:
-                        data = await response.json()
-                        self.access_token = data.get("access_token")
-                        expires_in = data.get("expires_in", 3600)
+                        res = await response.json()
+                        token_data = res.get("data", {})
+                        self.access_token = token_data.get("access_token")
+                        expires_in = token_data.get("expires_in", 3600)
                         self.token_expires_at = time.time() + expires_in
                         LOGGER.info("Successfully fetched new HRM access token.")
                         return self.access_token
