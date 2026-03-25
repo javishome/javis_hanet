@@ -48,8 +48,6 @@ async def setup_hrm_sync(hass: HomeAssistant, entry: ConfigEntry):
     async def hrm_sync_task(now):
         client = hass.data.get(DOMAIN, {}).get("hrm_client")
         if not client: return
-        places = entry.options.get("selected_places", entry.data.get("selected_places", []))
-        if not places: return
         
         data_updated = False
         all_results = []
@@ -58,6 +56,11 @@ async def setup_hrm_sync(hass: HomeAssistant, entry: ConfigEntry):
         if not person_data:
             return
         persons = person_data.get("person", [])
+        
+        # Lấy danh sách place_id duy nhất từ person_javis_v2.json
+        places = list(set(int(p.get("place_id")) for p in persons if p.get("place_id") is not None))
+        if not places: 
+            return
         
         for place_id in places:
             queue = await client.fetch_queue(place_id=place_id, limit=50)

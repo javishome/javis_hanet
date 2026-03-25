@@ -55,11 +55,12 @@ class HRMClient:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers=headers) as response:
                     if response.status == 200:
-                        return await response.json()
+                        res_json = await response.json()
+                        return res_json.get("data", [])
                     else:
                         text = await response.text()
                         LOGGER.error(f"Failed to fetch HRM queue. Status: {response.status}, Response: {text}")
-                        return None
+                        return []
         except Exception as e:
             LOGGER.error(f"Exception fetching HRM queue: {e}")
             return None
