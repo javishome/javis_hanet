@@ -46,24 +46,32 @@ async def setup_hrm_sync(hass: HomeAssistant, entry: ConfigEntry):
     interval_seconds = hass.data.get(DOMAIN, {}).get("hrm_sync_interval", 30)
     
     async def hrm_sync_task(now):
+        LOGGER.info(f"HRM Sync task triggered at {now}")
         client = hass.data.get(DOMAIN, {}).get("hrm_client")
-        if not client: return
+        if not client: 
+            LOGGER.warning("HRM Sync canceled: hrm_client not found in hass.data.")
+            return
         
         data_updated = False
         all_results = []
         filepath = PATH
         person_data = await hass.async_add_executor_job(load_json_file, filepath)
         if not person_data:
+            LOGGER.warning(f"HRM Sync canceled: No person data loaded from {filepath}")
             return
         persons = person_data.get("person", [])
         
         # Lấy danh sách place_id duy nhất từ person_javis_v2.json
         places = list(set(int(p.get("place_id")) for p in persons if p.get("place_id") is not None))
         if not places: 
+            LOGGER.info("HRM Sync: No place_id found in person data. Exiting sync.")
             return
+            
+        LOGGER.info(f"HRM Sync: Found {len(places)} places to sync: {places}")
         
         for place_id in places:
             queue = await client.fetch_queue(place_id=place_id, limit=50)
+            LOGGER.info(f"HRM Sync: Fetched {len(queue) if queue else 0} queue items for place_id {place_id}")
             if not queue:
                 continue
                 
@@ -83,14 +91,18 @@ async def setup_hrm_sync(hass: HomeAssistant, entry: ConfigEntry):
                                 person["end_time"] = item.get("end_time")
                             data_updated = True
                             success = True
+                            LOGGER.info(f"HRM Sync: Updated period for person_id {person_id}")
                         else:
                             success = False
                             error_message = f"Person ID {person_id} not found locally"
+                            LOGGER.warning(f"HRM Sync: {error_message}")
                     else:
                         success = True 
+                        LOGGER.info(f"HRM Sync: Ignored action {action} for person_id {person_id}")
                 except Exception as e:
                     success = False
                     error_message = str(e)
+                    LOGGER.error(f"HRM Sync error processing item {item}: {e}")
                 
                 ack_item = {"queue_id": item.get("id"), "success": success}
                 if error_message:
@@ -98,10 +110,14 @@ async def setup_hrm_sync(hass: HomeAssistant, entry: ConfigEntry):
                 all_results.append(ack_item)
                 
         if data_updated:
+            LOGGER.info(f"HRM Sync: Saving updated person data to {filepath}")
             await hass.async_add_executor_job(save_json_file, filepath, person_data)
             
         if all_results:
+            LOGGER.info(f"HRM Sync: Sending ACK for {len(all_results)} items")
             await client.ack_queue(all_results)
+        else:
+            LOGGER.info("HRM Sync: No items needed ACK in this cycle.")
             
     hass.data[DOMAIN]["hrm_sync_listener"] = async_track_time_interval(
         hass, hrm_sync_task, timedelta(seconds=interval_seconds)
