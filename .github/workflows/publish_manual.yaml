@@ -1,4 +1,5 @@
 name: Create Release manually
+
 on:
   repository_dispatch:
   workflow_dispatch:
@@ -7,6 +8,11 @@ on:
         description: "nhập phiên bản HA cần build"
         required: true
         default: "2024_12_4"
+        type: string # Định nghĩa rõ kiểu dữ liệu đầu vào
+
+# Thêm quyền write để GITHUB_TOKEN có thể xóa và ghi đè release/tag cũ
+permissions:
+  contents: write
 
 jobs:
   release:
@@ -21,7 +27,18 @@ jobs:
         id: get_version
         run: echo "VERSION=$(jq -r '.version' build/${{ github.event.inputs.set_release }}/manifest.json)" >> $GITHUB_ENV
 
-      - name: Create GitHub Release
+      - name: Delete old release and tag (if exists)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Tự động xóa release và tag bị trùng dựa trên tham số đầu vào
+        run: gh release delete "v${{ github.event.inputs.set_release }}_${{ env.VERSION }}" --cleanup-tag -y || true
+
+      - name: ZIP Component Dir
+        run: |
+          cd ${{ github.workspace }}/build/${{ github.event.inputs.set_release }}
+          zip -r javis_hanet.zip ./
+
+      - name: Create GitHub Release and Upload Asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v${{ github.event.inputs.set_release }}_${{ env.VERSION }}"
@@ -29,19 +46,6 @@ jobs:
           body: "### Changelog\n\n- Cập nhật v${{ github.event.inputs.set_release }}_${{ env.VERSION }}."
           draft: false
           prerelease: false
+          files: build/${{ github.event.inputs.set_release }}/javis_hanet.zip # Upload trực tiếp file zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: ZIP Component Dir
-        run: |
-          cd ${{ github.workspace }}/build/${{ github.event.inputs.set_release }}
-          zip -r javis_hanet.zip ./
-
-      - name: Upload zip to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ github.workspace }}/build/${{ github.event.inputs.set_release }}/javis_hanet.zip
-          asset_name: javis_hanet.zip
-          tag: "v${{ github.event.inputs.set_release }}_${{ env.VERSION }}"
-          overwrite: true
