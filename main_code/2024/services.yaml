@@ -1,69 +1,69 @@
 write_person:
   name: Log person
-  description: Log person
+  description: Ghi payload JSON nhận diện vào file log chấm công cục bộ (timesheet.log).
   fields:
     payload:
       name: Payload
-      description: Payload
+      description: Chuỗi JSON chứa dữ liệu nhận diện; hệ thống sẽ parse JSON trước khi ghi log.
       required: true
       selector:
         text:
 
 push_to_qcd:
   name: push all data to qcd
-  description: push all data to qcd
+  description: Đẩy toàn bộ bản ghi trong file log chấm công hiện tại lên API QCD khi service được gọi.
   fields:
     secret_key:
       name: Secret key
-      description:  Secret key
+      description: Khóa xác thực QCD (gửi qua header timesheet_secret_key).
       required: true
       selector:
         text:
     date:
       name: Date
-      description: Date to specify which log file to change
+      description: Ngày dùng để đổi tên file log trước khi đẩy (YYYY-MM-DD); bỏ trống để dùng ngày hiện tại.
       required: false
       selector:
         date:
 
 update_period:
   name: Update period
-  description: Update period
+  description: Cập nhật start_time/end_time của một person trong dữ liệu local và đồng bộ period lên API HRM.
   fields:
     person_id:
       name: Person ID
-      description: Person ID
+      description: Mã person cần cập nhật (bắt buộc, phải tồn tại trong dữ liệu local).
       required: true
       selector:
         text: {}
     start_time:
       name: Start time
-      description: Start time (optional)
+      description: Ngày bắt đầu hiệu lực (YYYY-MM-DD), có thể để trống.
       required: false
       selector:
         text: {}
     end_time:
       name: End time
-      description: End time (optional)
+      description: Ngày kết thúc hiệu lực (YYYY-MM-DD), có thể để trống.
       required: false
       selector:
         text: {}
 
 check_faceid_group_sensor:
   name: Check faceID group sensor
-  description: Check and update faceID group sensor
+  description: Quét person hết hạn, cập nhật face_sensor.yaml và reload MQTT để áp dụng thay đổi.
 
 sync_periods:
   name: Sync Periods
-  description: Sync periods with the server
+  description: Đồng bộ toàn bộ period (person_id, start_time, end_time) từ file local lên server HRM.
 
 set_hrm_sync_interval:
   name: Set HRM Sync Interval
-  description: Change loop interval (seconds) for auto-syncing HRM queue API.
+  description: Thay đổi chu kỳ polling của luồng HRM auto-sync và áp dụng ngay sau khi gọi service.
   fields:
     interval:
       name: Interval (s)
-      description: Polling interval in seconds (minimum 5s)
+      description: Số giây giữa các lần polling queue HRM (tối thiểu 5 giây).
       required: true
       selector:
         number:
@@ -73,22 +73,22 @@ set_hrm_sync_interval:
 
 set_hrm_sync_enabled:
   name: Bật/Tắt tự động đồng bộ HRM
-  description: Bật hoặc tắt tính năng load dữ liệu ngầm từ hàng đợi HRM.
+  description: Bật hoặc tắt luồng tự động đồng bộ dữ liệu từ hàng đợi HRM.
   fields:
     enabled:
       name: Trạng thái (Bật/Tắt)
-      description: Tích vào để bật, bỏ tích để tắt tự động đồng bộ.
+      description: Tích vào để bật, bỏ tích để tắt HRM auto-sync.
       required: true
       selector:
         boolean: {}
 
 set_hrm_sync_log_enabled:
   name: Bật/Tắt Log của luồng Sync HRM
-  description: Bật hoặc tắt việc in thông báo debug log ra System Console cho vòng lặp HRM Sync.
+  description: Bật hoặc tắt log debug cho luồng HRM auto-sync trên System Console.
   fields:
     enabled:
       name: Hiện Log (Bật/Tắt)
-      description: Tích vào để Log System xuất hiện, bỏ tích để chạy im lặng.
+      description: Tích vào để hiện log debug, bỏ tích để chạy im lặng.
       required: true
       selector:
         boolean: {}
