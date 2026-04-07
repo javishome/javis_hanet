@@ -49,6 +49,10 @@ update_period:
       selector:
         text: {}
 
+check_faceid_group_sensor:
+  name: Check faceID group sensor
+  description: Check and update faceID group sensor
+
 sync_periods:
   name: Sync Periods
   description: Sync periods with the server
@@ -66,3 +70,25 @@ set_hrm_sync_interval:
           min: 5
           max: 86400
           mode: box
+
+set_hrm_sync_enabled:
+  name: Bật/Tắt tự động đồng bộ HRM
+  description: Bật hoặc tắt tính năng load dữ liệu ngầm từ hàng đợi HRM.
+  fields:
+    enabled:
+      name: Trạng thái (Bật/Tắt)
+      description: Tích vào để bật, bỏ tích để tắt tự động đồng bộ.
+      required: true
+      selector:
+        boolean: {}
+
+set_hrm_sync_log_enabled:
+  name: Bật/Tắt Log của luồng Sync HRM
+  description: Bật hoặc tắt việc in thông báo debug log ra System Console cho vòng lặp HRM Sync.
+  fields:
+    enabled:
+      name: Hiện Log (Bật/Tắt)
+      description: Tích vào để Log System xuất hiện, bỏ tích để chạy im lặng.
+      required: true
+      selector:
+        boolean: {}

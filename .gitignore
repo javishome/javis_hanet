@@ -22,7 +22,7 @@ dist/
 # Maven
 target/
 dist/
-
+*.pyc
 # JetBrains IDE
 .idea/
 

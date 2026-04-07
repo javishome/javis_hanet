@@ -55,16 +55,28 @@
     },
     "step": {
       "init": {
+        "title": "Tùy chọn Javis Hanet",
+        "description": "Cấu hình địa điểm thiết bị.",
         "data": {
           "selected_places": "Chọn các địa điểm"
+        }
+      },
+      "hrm_settings": {
+        "title": "Cấu hình tự động đồng bộ HRM",
+        "description": "Cài đặt đồng bộ dữ liệu thời gian thuê từ HRM.",
+        "data": {
+          "hrm_sync_enabled": "Bật đồng bộ HRM (Tự động polling)",
+          "hrm_sync_log_enabled": "Bật log HRM Sync (Chạy Infoline debug)",
+          "hrm_sync_interval": "Chu kỳ đồng bộ HRM (giây)"
         },
-        "description": "Chọn các địa điểm bạn muốn sử dụng.",
-        "title": "Chọn địa điểm"
+        "data_description": {
+          "hrm_sync_interval": "Khoảng thời gian (tính bằng giây) giữa mỗi lần gọi API HRM. Tối thiểu 5 giây."
+        }
       }
     },
     "abort": {
       "options_updated": "Cài đặt đã được cập nhật.",
       "no_options": "Không có tùy chọn nào để cấu hình cho loại tài khoản này."
     } 
-}
+  }
 }
