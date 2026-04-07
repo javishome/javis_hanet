@@ -20,6 +20,7 @@ TEST_FILES = [
     "tests/test_services_registration.py",
     "tests/test_service_update_period.py",
     "tests/test_sync_periods_api.py",
+    "tests/test_hrm_auto_cleanup.py",
 ]
 
 total_pass = 0

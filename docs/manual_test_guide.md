@@ -135,6 +135,20 @@ python tests/test_sync_periods_api.py
     - Đầu ra mong đợi: trả `False`
     - Lưu ý: đảm bảo caller xử lý nhánh lỗi
 
+- `tests/test_hrm_auto_cleanup.py`
+  - **HC-001**
+    - Đầu vào: HRM sync bật, dữ liệu person không có `place_id`
+    - Đầu ra mong đợi: vẫn gọi luồng cleanup hết hạn
+    - Lưu ý: xác nhận cleanup chạy mỗi vòng sync, không phụ thuộc queue
+  - **HC-002**
+    - Đầu vào: HRM queue rỗng
+    - Đầu ra mong đợi: vẫn gọi cleanup, không gọi ACK queue
+    - Lưu ý: queue rỗng vẫn phải dọn person hết hạn
+  - **HC-003**
+    - Đầu vào: cleanup trả `True` hoặc `False`
+    - Đầu ra mong đợi: chỉ reload MQTT khi cleanup có thay đổi thật
+    - Lưu ý: tránh reload MQTT không cần thiết
+
 ## 4) Những phần chưa coverage đầy đủ bằng code
 
 Các phần sau cần test thật trên HA:
