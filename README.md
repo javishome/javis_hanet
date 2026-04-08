@@ -24,7 +24,7 @@
 ### 4. Hỗ trợ service cài đặt mở cửa, đồng bộ lên HRM
 - khi nhận được yêu cầu cài đặt mở cửa, tự động cập nhập file `person_javis_v2.json`
 
-### 4. Ghi log chấm công (Timesheet)
+### 5. Ghi log chấm công (Timesheet)
 - Ghi nhận dữ liệu nhận diện khuôn mặt vào file log
 - Đẩy dữ liệu chấm công lên hệ thống QCD
 
