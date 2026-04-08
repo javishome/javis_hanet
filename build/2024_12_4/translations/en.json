@@ -28,6 +28,20 @@
         },
         "description": "Chọn loại tài khoản bạn muốn sử dụng.",
         "title": "Chọn loại tài khoản"
+      },
+      "ai_box": {
+        "title": "Cấu hình AI Box",
+        "description": "Nhập thông tin kết nối AI Box.",
+        "data": {
+          "ip": "Địa chỉ IP",
+          "port": "Cổng",
+          "key": "Khóa kết nối"
+        },
+        "data_description": {
+          "ip": "Địa chỉ IP nội bộ của AI Box (ví dụ: 192.168.168.35).",
+          "port": "Cổng API của AI Box (mặc định 8080).",
+          "key": "Giá trị key của AI-Box."
+        }
       }
     },
     "abort": {
