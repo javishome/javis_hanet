@@ -11,6 +11,7 @@
 - Chọn địa điểm (Place) cần giám sát
 - Tự động đồng bộ danh sách nhân sự, camera, vị trí vào file `person_javis_v2.json`
 
+<<<<<<< HEAD
 ### 2. Kết nối AI Box
 - Kết nối trực tiếp qua **IP + Port + Key**
 - Lấy danh sách profile từ thiết bị AI Box local
@@ -181,3 +182,10 @@ trong code gốc sẽ được test phát hiện ngay lập tức.
 - File `api_doc.txt` chứa thông tin API nhạy cảm đã được **untrack khỏi Git**
 - Các thông tin xác thực HRM (`CLIENT_ID`, `CLIENT_SECRET`) lưu trong `const.py`
 - File `person_javis_v2.json` chứa dữ liệu nhân sự đã được thêm vào `.gitignore`
+=======
+# 23/10/2025: Update 2024_12_4_v1.0.6, 2024_4_4_v1.0.6
+- Update id person for ai box
+
+# 25/3/2026:  2024_12_4_2, 2024_4_4_2
+- thêm chức năng đồng bộ dữ liệu về từ hrm
+>>>>>>> main

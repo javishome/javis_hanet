@@ -55,6 +55,7 @@ check_faceid_group_sensor:
 
 sync_periods:
   name: Sync Periods
+<<<<<<< HEAD
   description: Đồng bộ toàn bộ period (person_id, start_time, end_time) từ file local lên server HRM.
 
 set_hrm_sync_interval:
@@ -64,12 +65,24 @@ set_hrm_sync_interval:
     interval:
       name: Interval (s)
       description: Số giây giữa các lần polling queue HRM (tối thiểu 5 giây).
+=======
+  description: Sync periods with the server
+
+set_hrm_sync_interval:
+  name: Set HRM Sync Interval
+  description: Change loop interval (seconds) for auto-syncing HRM queue API.
+  fields:
+    interval:
+      name: Interval (s)
+      description: Polling interval in seconds (minimum 5s)
+>>>>>>> main
       required: true
       selector:
         number:
           min: 5
           max: 86400
           mode: box
+<<<<<<< HEAD
 
 set_hrm_sync_enabled:
   name: Bật/Tắt tự động đồng bộ HRM
@@ -92,3 +105,5 @@ set_hrm_sync_log_enabled:
       required: true
       selector:
         boolean: {}
+=======
+>>>>>>> main
