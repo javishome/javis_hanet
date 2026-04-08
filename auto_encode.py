@@ -3,10 +3,11 @@ import shutil
 import json
 import subprocess
 import sys
+import re
 
 # Map: HA version → python version (Linux: python3.12, python3.13)
 map_python_version = {
-    "2024_4_4":  {"py_ver": "3.12"},
+    "2024_4_4": {"py_ver": "3.12"},
     "2024_12_4": {"py_ver": "3.13"},
 }
 
@@ -22,7 +23,31 @@ def _read_manifest_version(main_code_dir) -> str | None:
     if not os.path.exists(manifest_path):
         return None
     with open(manifest_path, "r", encoding="utf-8") as f:
-        return json.load(f)["version"]
+        return str(json.load(f).get("version", "")).strip()
+
+
+def _bump_version_tag(version: str) -> str:
+    """Accept `1` or `v1`, always returns `v{n+1}`."""
+    match = re.fullmatch(r"v?(\d+)", version.strip(), flags=re.IGNORECASE)
+    if not match:
+        raise ValueError(f"Invalid manifest version format: {version!r}")
+    current = int(match.group(1))
+    return f"v{current + 1}"
+
+
+def should_keep_current_version() -> bool:
+    """Ask user whether to keep the current manifest version."""
+    if not hasattr(sys.stdin, "isatty") or not sys.stdin.isatty():
+        print("ℹ️ Non-interactive mode detected, default to auto bump version.")
+        return False
+
+    while True:
+        answer = input("Giữ version hiện tại? (y/N): ").strip().lower()
+        if answer in ("y", "yes"):
+            return True
+        if answer in ("", "n", "no"):
+            return False
+        print("⚠️  Vui lòng nhập 'y' hoặc 'n'.")
 
 
 def _write_manifest_version(main_code_dir, version: str):
@@ -42,7 +67,11 @@ def update_manifest_version(main_code_dir):
         print(f"❌ manifest.json not found in {main_code_dir}")
         return None, None
     old = _read_manifest_version(main_code_dir)
-    new = str(int(old) + 1)
+    try:
+        new = _bump_version_tag(old)
+    except ValueError as err:
+        print(f"❌ {err}")
+        return None, None
     _write_manifest_version(main_code_dir, new)
     print(f"📝 Updated manifest.json version: {old} → {new}")
     return old, new
@@ -62,15 +91,14 @@ def copy_main_code_to_build(build_dir, main_code_dir):
 def is_python_available(py_ver: str) -> bool:
     """Kiểm tra python3.x có trong PATH không."""
     result = subprocess.run(
-        f"python{py_ver} --version",
-        shell=True, capture_output=True, text=True
+        f"python{py_ver} --version", shell=True, capture_output=True, text=True
     )
     return result.returncode == 0
 
 
 def _sudo() -> str:
     """Return empty string when already root (avoids hostname resolution issues with sudo)."""
-    if hasattr(os, 'getuid'):
+    if hasattr(os, "getuid"):
         return "" if os.getuid() == 0 else "sudo "
     return ""
 
@@ -131,7 +159,7 @@ def _print_manual_guide(py_ver: str):
    sudo dnf install python{py_ver}
 
 📖 Build từ source (mọi distro):
-   https://www.python.org/downloads/release/python-{py_ver.replace('.', '')}0/
+   https://www.python.org/downloads/release/python-{py_ver.replace(".", "")}0/
 """)
 
 
@@ -139,16 +167,17 @@ def encode_with_python(py_ver: str, build_dir: str):
     """Gọi python3.x để encode .py -> .pyc"""
     py_exe = f"python{py_ver}"
     encode_script = os.path.join(build_dir, "encode.py")
-    cmd = f"{py_exe} \"{encode_script}\""
+    cmd = f'{py_exe} "{encode_script}"'
     print(f"🚀 Running: {cmd}")
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=build_dir)
+    result = subprocess.run(
+        cmd, shell=True, capture_output=True, text=True, cwd=build_dir
+    )
     if result.returncode != 0:
         print(f"❌ Encode failed:\n{result.stderr}")
         return False
     else:
         print(f"✅ Encode successful:\n{result.stdout}")
         return True
-
 
 
 def check_encoded_files(build_dir):
@@ -169,9 +198,9 @@ def build_version(ha_version: str, root_dir: str, main_code_dir: str):
     py_ver = cfg["py_ver"]
 
     build_dir = os.path.join(root_dir, "build", ha_version)
-    print(f"\n{'='*55}")
+    print(f"\n{'=' * 55}")
     print(f"📦 Building {ha_version}  (Python {py_ver}) [Linux]")
-    print(f"{'='*55}")
+    print(f"{'=' * 55}")
 
     if not check_or_install_python(py_ver):
         return False
@@ -191,18 +220,32 @@ def main():
 
     print("🔁 Starting release for ALL versions")
 
-    # Tăng version TRƯỚC khi build → build dirs sẽ copy đúng version mới.
-    # Nếu có build thất bại → revert lại version cũ.
-    old_version, new_version = update_manifest_version(main_code_dir)
-    if new_version is None:
+    current_version = _read_manifest_version(main_code_dir)
+    if current_version is None:
+        print(f"❌ manifest.json not found in {main_code_dir}")
         sys.exit(1)
+
+    keep_version = should_keep_current_version()
+    version_was_bumped = False
+
+    if keep_version:
+        old_version = current_version
+        new_version = current_version
+        print(f"📌 Keep current manifest version: {new_version}")
+    else:
+        # Tăng version TRƯỚC khi build → build dirs sẽ copy đúng version mới.
+        # Nếu có build thất bại → revert lại version cũ.
+        old_version, new_version = update_manifest_version(main_code_dir)
+        if new_version is None:
+            sys.exit(1)
+        version_was_bumped = True
 
     results = {}
     for ha_version in map_python_version:
         ok = build_version(ha_version, root_dir, main_code_dir)
         results[ha_version] = "✅ OK" if ok else "❌ FAILED"
 
-    print(f"\n{'='*55}")
+    print(f"\n{'=' * 55}")
     print("📊 Summary:")
     for ver, status in results.items():
         py = map_python_version[ver]["py_ver"]
@@ -210,9 +253,11 @@ def main():
 
     if all(v == "✅ OK" for v in results.values()):
         print(f"🎉 Done! Version {new_version} released.")
-        
+
         # Đồng bộ version sang custom_components/javis_hanet nếu có
-        custom_manifest = os.path.join(root_dir, "custom_components", "javis_hanet", "manifest.json")
+        custom_manifest = os.path.join(
+            root_dir, "custom_components", "javis_hanet", "manifest.json"
+        )
         if os.path.exists(custom_manifest):
             try:
                 with open(custom_manifest, "r+", encoding="utf-8") as f:
@@ -221,12 +266,17 @@ def main():
                     f.seek(0)
                     json.dump(data, f, indent=4)
                     f.truncate()
-                print(f"📝 Synced version {new_version} to custom_components/javis_hanet/manifest.json")
+                print(
+                    f"📝 Synced version {new_version} to custom_components/javis_hanet/manifest.json"
+                )
             except Exception as e:
                 print(f"⚠️ Could not sync version to custom_components: {e}")
     else:
-        revert_manifest_version(main_code_dir, old_version)
-        print("⚠️  Some builds FAILED — version reverted to", old_version)
+        if version_was_bumped:
+            revert_manifest_version(main_code_dir, old_version)
+            print("⚠️  Some builds FAILED — version reverted to", old_version)
+        else:
+            print("⚠️  Some builds FAILED — version was kept at", new_version)
         sys.exit(1)
 
 

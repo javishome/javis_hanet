@@ -8,9 +8,9 @@
     "dependencies": [
         "application_credentials"
     ],
-    "documentation": "https://javishome.vn",
+    "documentation": "https://github.com/javishome/javis_hanet",
     "iot_class": "cloud_polling",
     "requirements": [],
     "zeroconf": [],
-    "version": "3"
+    "version": "v1"
 }
