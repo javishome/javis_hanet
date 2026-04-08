@@ -27,7 +27,10 @@ LOGGER = logging.getLogger(__name__)
 __all__ = ["DOMAIN"]
 
 from datetime import timedelta
-from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.event import (
+    async_track_time_change,
+    async_track_time_interval,
+)
 from .hrm_api import HRMClient
 import asyncio
 
@@ -164,6 +167,27 @@ async def setup_hrm_sync(hass: HomeAssistant, entry: ConfigEntry):
     LOGGER.info(f"HRM sync task scheduled with interval {interval_seconds} seconds")
 
 
+async def setup_daily_expiry_cleanup(hass: HomeAssistant) -> None:
+    """Schedule daily expired-person cleanup at 00:05 (Asia/Ho_Chi_Minh)."""
+    if hass.data.get(DOMAIN, {}).get("daily_cleanup_listener"):
+        hass.data[DOMAIN]["daily_cleanup_listener"]()
+
+    async def daily_cleanup_task(now):
+        is_updated = await handle_person_data(hass)
+        LOGGER.info(
+            f"Daily expiry cleanup at 00:05 completed. Updated face sensor: {is_updated}"
+        )
+
+    hass.data[DOMAIN]["daily_cleanup_listener"] = async_track_time_change(
+        hass,
+        daily_cleanup_task,
+        hour=0,
+        minute=5,
+        second=0,
+    )
+    LOGGER.info("Daily expiry cleanup scheduled at 00:05 (Asia/Ho_Chi_Minh)")
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Spotify from a config entry."""
     try:
@@ -183,6 +207,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # HRM Sync Setup
         hass.data[DOMAIN]["hrm_client"] = HRMClient()
         await setup_hrm_sync(hass, entry)
+        await setup_daily_expiry_cleanup(hass)
     except Exception as e:
         LOGGER.error(f"Error setting up entry: {e}")
         LOGGER.error(traceback.format_exc())
@@ -203,7 +228,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Dọn dẹp task đồng bộ ngầm nếu đang chạy
     if hass.data.get(DOMAIN, {}).get("hrm_sync_listener"):
         hass.data[DOMAIN]["hrm_sync_listener"]()
+    if hass.data.get(DOMAIN, {}).get("daily_cleanup_listener"):
+        hass.data[DOMAIN]["daily_cleanup_listener"]()
     hass.data.get(DOMAIN, {}).pop("hrm_client", None)
+    hass.data.get(DOMAIN, {}).pop("hrm_sync_listener", None)
+    hass.data.get(DOMAIN, {}).pop("daily_cleanup_listener", None)
 
     return True
 

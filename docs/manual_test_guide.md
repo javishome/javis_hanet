@@ -168,6 +168,14 @@ python tests/test_qcd.py
     - Đầu vào: cleanup trả `True` hoặc `False`
     - Đầu ra mong đợi: chỉ reload MQTT khi cleanup có thay đổi thật
     - Lưu ý: tránh reload MQTT không cần thiết
+  - **HC-004**
+    - Đầu vào: đăng ký daily cleanup scheduler
+    - Đầu ra mong đợi: callback được lên lịch lúc `00:05:00` và gọi cleanup
+    - Lưu ý: chạy độc lập, không phụ thuộc `hrm_sync_enabled`
+  - **HC-005**
+    - Đầu vào: unload entry khi đã có listeners
+    - Đầu ra mong đợi: hủy cả `hrm_sync_listener` và `daily_cleanup_listener`
+    - Lưu ý: tránh nhân đôi listener sau reload
 
 - `tests/test_qcd.py`
   - **QCD-001**
@@ -399,6 +407,20 @@ Mỗi kịch bản cần ghi:
   - Không có thay đổi ngoài mong muốn
 - Lưu ý:
   - Bắt buộc lưu evidence (file diff, log, ảnh màn hình)
+
+##### UI-VERIFY-003 Tự động dọn hết hạn lúc 00:05 (không phụ thuộc HRM)
+- Đầu vào/Điều kiện:
+  - Có ít nhất 1 person đã hết hạn trong `person_javis_v2.json`
+  - `hrm_sync_enabled` đặt `false`
+- Bước thực hiện:
+  1. Đảm bảo person hết hạn còn nằm trong `face_sensor.yaml`
+  2. Chờ qua mốc `00:05` (giờ Hà Nội)
+  3. Kiểm tra `face_sensor.yaml` và log HA
+- Đầu ra mong đợi:
+  - Person hết hạn bị xóa khỏi `face_sensor.yaml`
+  - MQTT chỉ reload khi có thay đổi thật
+- Lưu ý:
+  - Không cần bật HRM sync, cơ chế dọn chạy theo lịch ngày cố định
 
 ### M-001 Cấu hình Hanet OAuth
 - Đầu vào/Điều kiện:

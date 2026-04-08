@@ -220,10 +220,85 @@ async def case_handle_person_data_reload_only_when_changed():
     check("HC-003 restart not called when unchanged", mqtt_mock_false.await_count, 0)
 
 
+async def case_daily_scheduler_runs_independent_of_hrm_toggle():
+    show_case(
+        "HC-004",
+        "Daily cleanup scheduler runs even when HRM sync is disabled",
+        "setup_daily_expiry_cleanup with hrm_sync_enabled=false",
+        "daily callback is registered and calls handle_person_data",
+        "Daily cleanup must not depend on HRM sync toggle.",
+    )
+
+    hass = FakeHass()
+    captured = {"callback": None}
+
+    def fake_track_time_change(_hass, callback, hour, minute, second):
+        captured["callback"] = callback
+        captured["time"] = (hour, minute, second)
+        return lambda: None
+
+    with (
+        patch.object(
+            javis_init,
+            "async_track_time_change",
+            side_effect=fake_track_time_change,
+        ),
+        patch.object(
+            javis_init, "handle_person_data", AsyncMock(return_value=False)
+        ) as cleanup_mock,
+    ):
+        await javis_init.setup_daily_expiry_cleanup(hass)
+        await captured["callback"](None)
+
+    check_true("HC-004 callback captured", captured["callback"] is not None)
+    check("HC-004 schedule at 00:05:00", captured["time"], (0, 5, 0))
+    check("HC-004 cleanup called by callback", cleanup_mock.await_count, 1)
+
+
+async def case_unload_cancels_daily_cleanup_listener():
+    show_case(
+        "HC-005",
+        "Unloading entry cancels daily cleanup listener",
+        "hass.data has daily_cleanup_listener + hrm_sync_listener",
+        "both listeners are called and removed",
+        "Prevents duplicated listeners after reload/unload cycles.",
+    )
+
+    hass = FakeHass()
+    calls = {"hrm": 0, "daily": 0}
+
+    def cancel_hrm():
+        calls["hrm"] += 1
+
+    def cancel_daily():
+        calls["daily"] += 1
+
+    hass.data[DOMAIN]["hrm_sync_listener"] = cancel_hrm
+    hass.data[DOMAIN]["daily_cleanup_listener"] = cancel_daily
+    hass.data[DOMAIN]["hrm_client"] = object()
+
+    entry = SimpleNamespace(entry_id="entry-1")
+    result = await javis_init.async_unload_entry(hass, entry)
+
+    check("HC-005 unload returns True", result, True)
+    check("HC-005 hrm listener cancelled", calls["hrm"], 1)
+    check("HC-005 daily listener cancelled", calls["daily"], 1)
+    check_true(
+        "HC-005 hrm listener removed", "hrm_sync_listener" not in hass.data[DOMAIN]
+    )
+    check_true(
+        "HC-005 daily listener removed",
+        "daily_cleanup_listener" not in hass.data[DOMAIN],
+    )
+    check_true("HC-005 hrm client removed", "hrm_client" not in hass.data[DOMAIN])
+
+
 async def main():
     await case_sync_calls_cleanup_without_places()
     await case_sync_calls_cleanup_when_queue_empty()
     await case_handle_person_data_reload_only_when_changed()
+    await case_daily_scheduler_runs_independent_of_hrm_toggle()
+    await case_unload_cancels_daily_cleanup_listener()
 
 
 asyncio.run(main())
