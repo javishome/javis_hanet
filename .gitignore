@@ -25,6 +25,7 @@ dist/
 *.pyc
 # JetBrains IDE
 .idea/
+docs/*
 
 # Unit test reports
 TEST*.xml
