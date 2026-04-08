@@ -1,6 +1,6 @@
 # Javis Hanet - Custom Component cho Home Assistant
 
-> Tích hợp hệ thống nhận diện khuôn mặt Hanet / AI Box vào Home Assistant, kèm tính năng đồng bộ tự động dữ liệu thời gian thuê (period) từ hệ thống HRM.
+> Tích hợp hệ thống nhận diện khuôn mặt Hanet / AI Box vào Home Assistant, kèm tính năng đồng bộ tự động dữ liệu thời gian mở cửa (period) từ hệ thống HRM.
 
 ---
 
@@ -64,7 +64,7 @@ Ghi dữ liệu nhận diện vào file log chấm công.
 ---
 
 ### `javis_hanet.update_period`
-Cập nhật thời gian thuê cho 1 nhân sự.
+Cập nhật thời gian mở cửa cho 1 nhân sự.
 
 | Tham số | Bắt buộc | Mô tả |
 |---|---|---|
@@ -80,7 +80,7 @@ Kiểm tra và cập nhật lại sensor nhóm FaceID. Không có tham số.
 ---
 
 ### `javis_hanet.sync_periods`
-Đồng bộ thời gian thuê từ server. Không có tham số.
+Đồng bộ thời gian mở cửa từ server. Không có tham số.
 
 ---
 

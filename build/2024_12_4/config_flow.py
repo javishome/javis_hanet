@@ -398,6 +398,7 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry):
         """Initialize options flow."""
         self.config_entry = config_entry
+        self.options_data = {}
 
     async def async_step_init(self, user_input=None):
         """Manage options."""
@@ -415,30 +416,29 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
             selected = user_input["selected_places"]
             if not selected:
                 errors["base"] = "no_place_selected"
-                return self.async_show_form(
-                    step_id="select_places",
-                    data_schema=schema,
-                    errors=errors,
-                )
-            
-            selected_places = [
-                place for place in self.places_info if str(place["place_id"]) in selected]
-            
-            data["selected_places"] = selected_places
-            
-            self.hass.config_entries.async_update_entry(
-                self.config_entry,
-                options=data,                # Cập nhật options
-            )
-            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
-            return self.async_abort(reason="options_updated")
-
-                # Nếu OK thì lưu options mới
+            else:
+                # Chỉ lọc những place có thật
+                # Nhưng do API call ở dưới chưa diễn ra, ta dùng self.places_info sinh ra từ trước (nếu click lại) 
+                # hoặc gán tạm, vì API places sẽ gọi sau.
+                # Cách tốt nhất là gọi API lấy place info TRƯỚC khối user_input.
+                pass  # Mình sẽ move API call lên đầu hàm để validate đúng
 
         # Gọi API lấy places
+        # Đảm bảo Token còn hiệu lực thông qua OAuth2Session của HA
+        try:
+            implementation = await config_entry_oauth2_flow.async_get_config_entry_implementation(
+                self.hass, self.config_entry
+            )
+            oauth_session = config_entry_oauth2_flow.OAuth2Session(self.hass, self.config_entry, implementation)
+            await oauth_session.async_ensure_token_valid()
+            access_token = oauth_session.token["access_token"]
+        except Exception as e:
+            LOGGER.warning(f"Failed to refresh OAuth token natively, fallback to config_entry token: {e}")
+            access_token = data.get("token", {}).get("access_token")
+
         session = async_get_clientsession(self.hass)
         body_data = {
-            "access_token": data["token"]["access_token"],
+            "access_token": access_token,
         }
         try:
             async with session.post(get_host(self.add_url) + API_GET_PLACES_INFO_URL, data = body_data) as response:
@@ -450,6 +450,13 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
         except Exception as e:
             LOGGER.error("Error fetching places info: %s", str(e))
             return self.async_abort(reason="places_info_not_found")
+            
+        if user_input is not None and not errors:
+            selected_places = [
+                place for place in self.places_info if str(place["place_id"]) in user_input["selected_places"]
+            ]
+            self.options_data["selected_places"] = selected_places
+            return await self.async_step_hrm_settings()
 
         places_dict = {
             str(place["place_id"]): place["place_name"] for place in self.places_info
@@ -458,10 +465,40 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
             str(place["place_id"]) for place in data.get("selected_places", [])
         ]
         
-        # Tạo schema với default value
         schema = vol.Schema({
-            vol.Required("selected_places", default=default_selected_places): cv.multi_select(places_dict)
+            vol.Required("selected_places", default=default_selected_places): cv.multi_select(places_dict),
         })
 
-
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
+
+    async def async_step_hrm_settings(self, user_input=None):
+        """Manage HRM settings step."""
+        errors = {}
+        data = {**self.config_entry.data, **self.config_entry.options}
+
+        if user_input is not None:
+            self.options_data["hrm_sync_enabled"] = user_input.get("hrm_sync_enabled", False)
+            self.options_data["hrm_sync_log_enabled"] = user_input.get("hrm_sync_log_enabled", False)
+            self.options_data["hrm_sync_interval"] = user_input.get("hrm_sync_interval", 30)
+
+            # Gộp options form 1 và form 2
+            new_options = {**data, **self.options_data}
+            
+            self.hass.config_entries.async_update_entry(
+                self.config_entry,
+                options=new_options,
+            )
+            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            return self.async_abort(reason="options_updated")
+
+        default_sync_enabled = data.get("hrm_sync_enabled", False)
+        default_sync_log_enabled = data.get("hrm_sync_log_enabled", False)
+        default_sync_interval = data.get("hrm_sync_interval", 30)
+
+        schema = vol.Schema({
+            vol.Optional("hrm_sync_enabled", default=default_sync_enabled): bool,
+            vol.Optional("hrm_sync_log_enabled", default=default_sync_log_enabled): bool,
+            vol.Optional("hrm_sync_interval", default=default_sync_interval): vol.All(vol.Coerce(int), vol.Range(min=5))
+        })
+
+        return self.async_show_form(step_id="hrm_settings", data_schema=schema, errors=errors)
