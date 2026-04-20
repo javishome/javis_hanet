@@ -9,6 +9,7 @@ import sys
 import tempfile
 from types import SimpleNamespace
 from unittest.mock import patch
+from datetime import datetime
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -17,6 +18,8 @@ import auto_encode as release_tool
 
 tests_run = 0
 tests_failed = 0
+
+today_version = datetime.now().strftime("v%Y%m%d")
 
 
 def show_case(case_id, goal, test_input, expected_output, note):
@@ -62,60 +65,26 @@ def expect_raises_value_error(test_name, func, value):
 
 
 print("\n" + "=" * 60)
-print("TEST VERSION BUMP LOGIC (auto_encode.py)")
+print("TEST VERSION LOGIC (auto_encode.py)")
 print("=" * 60)
 
 
 show_case(
     "V-001",
-    "Bump prefixed version",
-    "v1",
-    "v2",
-    "Normal path for the new format.",
+    "Return date-based version",
+    "any_string",
+    today_version,
+    "Should ignore input and return today's datestring",
 )
-check("_bump_version_tag('v1')", release_tool._bump_version_tag("v1"), "v2")
-
-
-show_case(
-    "V-002",
-    "Backward-compatible bump from old format",
-    "1",
-    "v2",
-    "Keeps compatibility with old numeric manifests.",
-)
-check("_bump_version_tag('1')", release_tool._bump_version_tag("1"), "v2")
-
-
-show_case(
-    "V-003",
-    "Case-insensitive prefix",
-    "V9",
-    "v10",
-    "Input may contain uppercase V.",
-)
-check("_bump_version_tag('V9')", release_tool._bump_version_tag("V9"), "v10")
-
-
-show_case(
-    "V-004",
-    "Reject invalid formats",
-    "['vx', '1.2', '', 'v']",
-    "ValueError for each item",
-    "Only v<digits> or <digits> are valid.",
-)
-for invalid_value in ("vx", "1.2", "", "v"):
-    expect_raises_value_error(
-        f"_bump_version_tag('{invalid_value}') raises ValueError",
-        release_tool._bump_version_tag,
-        invalid_value,
-    )
-
+check("_bump_version_tag('v1')", release_tool._bump_version_tag("v1"), today_version)
+check("_bump_version_tag('1')", release_tool._bump_version_tag("1"), today_version)
+check("_bump_version_tag('invalid')", release_tool._bump_version_tag("invalid"), today_version)
 
 show_case(
     "V-005",
     "Update manifest file from v-format",
     '{"version": "v1"}',
-    'old="v1", new="v2", file version="v2"',
+    f'old="v1", new="{today_version}", file version="{today_version}"',
     "Avoid unicode print issues by mocking print in this test.",
 )
 with tempfile.TemporaryDirectory() as tmp:
@@ -130,15 +99,15 @@ with tempfile.TemporaryDirectory() as tmp:
         data = json.load(f)
 
     check("update_manifest_version old", old_version, "v1")
-    check("update_manifest_version new", new_version, "v2")
-    check("manifest file updated to v2", data["version"], "v2")
+    check("update_manifest_version new", new_version, today_version)
+    check(f"manifest file updated to {today_version}", data["version"], today_version)
 
 
 show_case(
     "V-006",
     "Update manifest file from legacy numeric format",
     '{"version": "1"}',
-    'old="1", new="v2", file version="v2"',
+    f'old="1", new="{today_version}", file version="{today_version}"',
     "Ensures migration path for existing repos.",
 )
 with tempfile.TemporaryDirectory() as tmp:
@@ -153,16 +122,16 @@ with tempfile.TemporaryDirectory() as tmp:
         data = json.load(f)
 
     check("legacy old version", old_version, "1")
-    check("legacy new version", new_version, "v2")
-    check("legacy manifest rewritten", data["version"], "v2")
+    check("legacy new version", new_version, today_version)
+    check("legacy manifest rewritten", data["version"], today_version)
 
 
 show_case(
     "V-007",
-    "Invalid manifest version should not be overwritten",
+    "Invalid manifest version should be fully overwritten by date-based",
     '{"version": "alpha"}',
-    "returns (None, None) and file stays unchanged",
-    "A safe failure path for malformed data.",
+    f'old="alpha", new="{today_version}", file version="{today_version}"',
+    "Safe migration from any string.",
 )
 with tempfile.TemporaryDirectory() as tmp:
     manifest_path = os.path.join(tmp, "manifest.json")
@@ -175,9 +144,9 @@ with tempfile.TemporaryDirectory() as tmp:
     with open(manifest_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    check("invalid format old version", old_version, None)
-    check("invalid format new version", new_version, None)
-    check_true("file version remains unchanged", data["version"] == "alpha")
+    check("invalid format old version", old_version, "alpha")
+    check("invalid format new version", new_version, today_version)
+    check_true("file version updated", data["version"] == today_version)
 
 
 show_case(
