@@ -4,6 +4,7 @@ import json
 import subprocess
 import sys
 import re
+from datetime import datetime
 
 # Map: HA version → python version (Linux: python3.12, python3.13)
 map_python_version = {
@@ -27,12 +28,8 @@ def _read_manifest_version(main_code_dir) -> str | None:
 
 
 def _bump_version_tag(version: str) -> str:
-    """Accept `1` or `v1`, always returns `v{n+1}`."""
-    match = re.fullmatch(r"v?(\d+)", version.strip(), flags=re.IGNORECASE)
-    if not match:
-        raise ValueError(f"Invalid manifest version format: {version!r}")
-    current = int(match.group(1))
-    return f"v{current + 1}"
+    """Return date-based version vYYYYMMDD."""
+    return datetime.now().strftime("v%Y%m%d")
 
 
 def should_keep_current_version() -> bool:
