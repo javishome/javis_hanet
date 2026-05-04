@@ -5,8 +5,6 @@ Chạy bằng lệnh: python tests/test_utils.py
 """
 import sys
 import os
-import json
-import contextlib
 import tempfile
 import types
 import yaml
@@ -124,68 +122,34 @@ check_true("is_new_version() chạy không crash", isinstance(is_new_version(), 
 # ── MAC Helper Tests ─────────────────────────────────────────────────
 print("\n-- MAC Helpers --")
 
-class FakeSupervisorResponse:
-    def __init__(self, body):
-        self.body = body.encode("utf-8")
 
-    def __enter__(self):
-        return self
+def patch_open(fake_values):
+    def fake_open_for_mac(path, *args, **kwargs):
+        if path in fake_values:
+            from io import StringIO
+            return StringIO(fake_values[path] + "\n")
+        raise FileNotFoundError(path)
 
-    def __exit__(self, exc_type, exc, tb):
-        return False
-
-    def read(self):
-        return self.body
+    return fake_open_for_mac
 
 
-def fake_supervisor_urlopen(request, timeout=0):
-    body = json.dumps({
-        "result": "ok",
-        "data": {
-            "interfaces": [
-                {"interface": "eth0", "primary": False, "mac": "3e:ae:80:91:2b:a9"},
-                {"interface": "wlan0", "primary": True, "mac": "70:f7:54:e0:06:25"},
-            ]
-        },
-    })
-    return FakeSupervisorResponse(body)
-
-
-original_urlopen = utils_mod.urllib.request.urlopen
-original_token = os.environ.get("SUPERVISOR_TOKEN")
-try:
-    os.environ["SUPERVISOR_TOKEN"] = "fake-token"
-    utils_mod.urllib.request.urlopen = fake_supervisor_urlopen
-    check("get_mac uses Supervisor eth0 MAC", get_mac(), 68919202229161)
-finally:
-    utils_mod.urllib.request.urlopen = original_urlopen
-    if original_token is None:
-        os.environ.pop("SUPERVISOR_TOKEN", None)
-    else:
-        os.environ["SUPERVISOR_TOKEN"] = original_token
-
-
-def fake_open_for_mac(path, *args, **kwargs):
-    if path == "/sys/class/net/eth0/address":
-        from io import StringIO
-        return StringIO("3e:ae:80:91:2b:a9\n")
-    raise FileNotFoundError(path)
-
-original_check_output = utils_mod.subprocess.check_output
 original_open = getattr(utils_mod, "open", None)
-original_getnode = utils_mod.uuid.getnode
 try:
-    utils_mod.subprocess.check_output = lambda *args, **kwargs: b"1.1.1.1 dev eth0 src 192.168.1.10 uid 0\n"
-    utils_mod.open = fake_open_for_mac
-    utils_mod.uuid.getnode = lambda: int("70f754e00625", 16)
-    check("get_mac uses default route interface MAC", get_mac(), 68919202229161)
+    utils_mod.open = patch_open({
+        "/sys/class/net/eth0/address": "3e:ae:80:91:2b:a9",
+        "/sys/class/net/end0/address": "70:f7:54:e0:06:25",
+    })
+    check("get_mac prefers eth0 MAC", get_mac(), 68919202229161)
+
+    utils_mod.open = patch_open({
+        "/sys/class/net/end0/address": "3e:ae:80:91:2b:a9",
+    })
+    check("get_mac falls back to end0 MAC", get_mac(), 68919202229161)
 finally:
-    utils_mod.subprocess.check_output = original_check_output
     if original_open is None:
         del utils_mod.open
     else:
         utils_mod.open = original_open
-    utils_mod.uuid.getnode = original_getnode
 
 # ── Chứng minh đang import code gốc ─────────────────────────────────
 print("\n── Chứng minh đường dẫn ──")

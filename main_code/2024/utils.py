@@ -3,9 +3,6 @@ import json
 import os
 from homeassistant.const import __version__ as ha_version
 import logging
-import uuid
-import subprocess
-import urllib.request
 import aiohttp
 from datetime import datetime
 import yaml
@@ -117,129 +114,30 @@ def _mac_to_decimal(mac_address):
     return int(normalized, 16)
 
 
-def _find_mac_in_supervisor_interface(interface):
-    for key in ("mac", "mac_address", "macaddress", "hw_address"):
-        value = interface.get(key)
-        if value:
-            return value
-    return None
-
-
-def _interface_name(interface):
-    return str(
-        interface.get("interface")
-        or interface.get("name")
-        or ""
-    ).lower()
-
-
-def _get_supervisor_device_mac():
-    token = os.environ.get("SUPERVISOR_TOKEN")
-    if not token:
-        return None
-
-    request = urllib.request.Request(
-        "http://supervisor/network/info",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=3) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except Exception as e:
-        LOGGER.warning("Unable to read Supervisor network info: %s", e)
-        return None
-
-    interfaces = payload.get("data", {}).get("interfaces", [])
-    if not isinstance(interfaces, list):
-        return None
-
-    for interface in interfaces:
-        if isinstance(interface, dict) and _interface_name(interface) == "eth0":
-            mac = _find_mac_in_supervisor_interface(interface)
-            if mac:
-                return mac, "supervisor:eth0"
-
-    for interface in interfaces:
-        if isinstance(interface, dict):
-            if interface.get("primary"):
-                mac = _find_mac_in_supervisor_interface(interface)
-                if mac:
-                    return mac, f"supervisor:{_interface_name(interface) or 'primary'}"
-
-    for interface in interfaces:
-        if isinstance(interface, dict):
-            mac = _find_mac_in_supervisor_interface(interface)
-            if mac:
-                return mac, f"supervisor:{_interface_name(interface) or 'unknown'}"
-    return None
-
-
-def _get_default_route_interface():
-    try:
-        output = subprocess.check_output(
-            ["ip", "route", "get", "1.1.1.1"],
-            stderr=subprocess.DEVNULL,
-            timeout=3,
-        ).decode("utf-8", errors="ignore")
-    except Exception as e:
-        LOGGER.warning("Unable to determine default route interface: %s", e)
-        return None
-
-    parts = output.split()
-    if "dev" not in parts:
-        return None
-    dev_index = parts.index("dev") + 1
-    if dev_index >= len(parts):
-        return None
-    return parts[dev_index]
-
-
 def _read_interface_mac(interface):
     if not interface:
         return None
     try:
         with open(f"/sys/class/net/{interface}/address", "r", encoding="utf-8") as mac_file:
             return mac_file.read().strip()
+    except FileNotFoundError:
+        return None
     except Exception as e:
         LOGGER.warning("Unable to read MAC address for interface %s: %s", interface, e)
         return None
 
 
-def _read_eth0_mac():
-    mac = _read_interface_mac("eth0")
-    if not mac:
-        return None
-    return mac, "sysfs:eth0"
-
-
 def _get_mac_details():
-    supervisor_mac = _get_supervisor_device_mac()
-    if supervisor_mac:
-        mac, source = supervisor_mac
-        try:
-            return _mac_to_decimal(mac), source, mac
-        except ValueError as e:
-            LOGGER.warning("Invalid MAC address from %s: %s", source, e)
-
-    eth0_mac = _read_eth0_mac()
-    if eth0_mac:
-        mac, source = eth0_mac
-        try:
-            return _mac_to_decimal(mac), source, mac
-        except ValueError as e:
-            LOGGER.warning("Invalid MAC address from %s: %s", source, e)
-
-    interface = _get_default_route_interface()
-    mac = _read_interface_mac(interface)
-    if mac:
+    for interface in ("eth0", "end0"):
+        mac = _read_interface_mac(interface)
+        if not mac:
+            continue
         try:
             return _mac_to_decimal(mac), f"sysfs:{interface}", mac
         except ValueError as e:
             LOGGER.warning("Invalid MAC address from interface %s: %s", interface, e)
 
-    mac_hex = uuid.UUID(int=uuid.getnode()).hex[-12:]
-    mac_address = ":".join(mac_hex[i:i+2] for i in range(0, 12, 2))
-    return int(mac_hex, 16), "uuid.getnode", mac_address
+    raise RuntimeError("Unable to resolve Home Controller MAC from eth0 or end0")
 
 
 def get_mac():
