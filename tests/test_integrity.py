@@ -127,3 +127,13 @@ class TestManifest:
             data = json.load(f)
         for key in ("domain", "name", "version"):
             assert key in data, f"manifest.json thiếu key '{key}'"
+
+
+class TestConfigFlowCompatibility:
+    def test_options_flow_does_not_assign_config_entry_property(self):
+        """HA 2025.12 makes OptionsFlow.config_entry read-only."""
+        path = os.path.join(BASE_DIR, "config_flow.py")
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        assert "self.config_entry = config_entry" not in content
