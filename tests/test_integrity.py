@@ -137,3 +137,26 @@ class TestConfigFlowCompatibility:
             content = f.read()
 
         assert "self.config_entry = config_entry" not in content
+
+    def test_oauth_error_handling_does_not_assume_status_attr(self):
+        path = os.path.join(BASE_DIR, "config_flow.py")
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        assert "err.status" not in content
+        assert 'getattr(err, "status", None)' in content
+
+    def test_config_flow_does_not_abort_current_flow(self):
+        path = os.path.join(BASE_DIR, "config_flow.py")
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        assert 'flow["flow_id"] == self.flow_id' in content
+
+    def test_reauth_confirm_always_returns_flow_result(self):
+        path = os.path.join(BASE_DIR, "config_flow.py")
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        assert "async_step_reauth_confirm" in content
+        assert 'reason="reauth_failed"' in content

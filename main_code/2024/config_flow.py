@@ -163,6 +163,7 @@ class HanetFlowHandler(
                 description_placeholders={"account": reauth_entry.data["userID"]},
                 errors=errors,
             )
+        return self.async_abort(reason="reauth_failed")
 
     async def async_step_creation(
         self, user_input: dict[str, Any] | None = None
@@ -201,10 +202,7 @@ class HanetFlowHandler(
             return self.async_abort(reason="oauth_timeout")
         except Exception as err:
             LOGGER.error("Error resolving OAuth token: %s", err)
-            if (
-                isinstance(err, Exception)
-                and err.status == HTTPStatus.UNAUTHORIZED
-            ):
+            if getattr(err, "status", None) == HTTPStatus.UNAUTHORIZED:
                 return self.async_abort(reason="oauth_unauthorized")
             return self.async_abort(reason="oauth_failed")
 
@@ -326,6 +324,8 @@ class HanetFlowHandler(
         # Hủy flow cũ nếu có
         in_progress = self.hass.config_entries.flow.async_progress_by_handler(self.handler)
         for flow in in_progress:
+            if flow["flow_id"] == self.flow_id:
+                continue
             self.hass.config_entries.flow.async_abort(flow["flow_id"])
 
         return await self.async_step_account_type()
