@@ -6,7 +6,9 @@ Chạy bằng lệnh: python tests/test_utils.py
 import sys
 import os
 import json
+import contextlib
 import tempfile
+import types
 import yaml
 import traceback
 
@@ -14,13 +16,26 @@ import traceback
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import tests.conftest
 
+pkg_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../main_code/2024"))
+homeassistant_mod = types.ModuleType("homeassistant")
+homeassistant_const_mod = types.ModuleType("homeassistant.const")
+homeassistant_const_mod.__version__ = "2025.12.3"
+homeassistant_mod.const = homeassistant_const_mod
+sys.modules.setdefault("homeassistant", homeassistant_mod)
+sys.modules.setdefault("homeassistant.const", homeassistant_const_mod)
+fake_component_pkg = types.ModuleType("custom_components.javis_hanet")
+fake_component_pkg.__path__ = [pkg_path]
+sys.modules["custom_components.javis_hanet"] = fake_component_pkg
+
 # ── IMPORT THẲNG TỪ CODE GỐC ────────────────────────────────────────
 from custom_components.javis_hanet.utils import (
     yaml2dict,
     dict2yaml,
     get_host,
+    get_mac,
     is_new_version,
 )
+import custom_components.javis_hanet.utils as utils_mod
 # load_json_file và save_json_file nằm trong utils.py
 # Kiểm tra xem hàm có tồn tại không, nếu không fallback
 try:
@@ -106,9 +121,74 @@ print("\n── Version Check (is_new_version) ──")
 # Ta chỉ kiểm tra nó có chạy được mà không crash
 check_true("is_new_version() chạy không crash", isinstance(is_new_version(), bool))
 
+# ── MAC Helper Tests ─────────────────────────────────────────────────
+print("\n-- MAC Helpers --")
+
+class FakeSupervisorResponse:
+    def __init__(self, body):
+        self.body = body.encode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def read(self):
+        return self.body
+
+
+def fake_supervisor_urlopen(request, timeout=0):
+    body = json.dumps({
+        "result": "ok",
+        "data": {
+            "interfaces": [
+                {"interface": "eth0", "primary": False, "mac": "3e:ae:80:91:2b:a9"},
+                {"interface": "wlan0", "primary": True, "mac": "70:f7:54:e0:06:25"},
+            ]
+        },
+    })
+    return FakeSupervisorResponse(body)
+
+
+original_urlopen = utils_mod.urllib.request.urlopen
+original_token = os.environ.get("SUPERVISOR_TOKEN")
+try:
+    os.environ["SUPERVISOR_TOKEN"] = "fake-token"
+    utils_mod.urllib.request.urlopen = fake_supervisor_urlopen
+    check("get_mac uses Supervisor eth0 MAC", get_mac(), 68919202229161)
+finally:
+    utils_mod.urllib.request.urlopen = original_urlopen
+    if original_token is None:
+        os.environ.pop("SUPERVISOR_TOKEN", None)
+    else:
+        os.environ["SUPERVISOR_TOKEN"] = original_token
+
+
+def fake_open_for_mac(path, *args, **kwargs):
+    if path == "/sys/class/net/eth0/address":
+        from io import StringIO
+        return StringIO("3e:ae:80:91:2b:a9\n")
+    raise FileNotFoundError(path)
+
+original_check_output = utils_mod.subprocess.check_output
+original_open = getattr(utils_mod, "open", None)
+original_getnode = utils_mod.uuid.getnode
+try:
+    utils_mod.subprocess.check_output = lambda *args, **kwargs: b"1.1.1.1 dev eth0 src 192.168.1.10 uid 0\n"
+    utils_mod.open = fake_open_for_mac
+    utils_mod.uuid.getnode = lambda: int("70f754e00625", 16)
+    check("get_mac uses default route interface MAC", get_mac(), 68919202229161)
+finally:
+    utils_mod.subprocess.check_output = original_check_output
+    if original_open is None:
+        del utils_mod.open
+    else:
+        utils_mod.open = original_open
+    utils_mod.uuid.getnode = original_getnode
+
 # ── Chứng minh đang import code gốc ─────────────────────────────────
 print("\n── Chứng minh đường dẫn ──")
-import custom_components.javis_hanet.utils as utils_mod
 check_true("utils.__file__ trỏ tới main_code/2024/utils.py",
            "main_code" in utils_mod.__file__ and "2024" in utils_mod.__file__)
 print(f"  📁 File thật: {utils_mod.__file__}")

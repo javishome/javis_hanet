@@ -127,3 +127,36 @@ class TestManifest:
             data = json.load(f)
         for key in ("domain", "name", "version"):
             assert key in data, f"manifest.json thiếu key '{key}'"
+
+
+class TestConfigFlowCompatibility:
+    def test_options_flow_does_not_assign_config_entry_property(self):
+        """HA 2025.12 makes OptionsFlow.config_entry read-only."""
+        path = os.path.join(BASE_DIR, "config_flow.py")
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        assert "self.config_entry = config_entry" not in content
+
+    def test_oauth_error_handling_does_not_assume_status_attr(self):
+        path = os.path.join(BASE_DIR, "config_flow.py")
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        assert "err.status" not in content
+        assert 'getattr(err, "status", None)' in content
+
+    def test_config_flow_does_not_abort_current_flow(self):
+        path = os.path.join(BASE_DIR, "config_flow.py")
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        assert 'flow["flow_id"] == self.flow_id' in content
+
+    def test_reauth_confirm_always_returns_flow_result(self):
+        path = os.path.join(BASE_DIR, "config_flow.py")
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        assert "async_step_reauth_confirm" in content
+        assert 'reason="reauth_failed"' in content

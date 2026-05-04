@@ -163,6 +163,7 @@ class HanetFlowHandler(
                 description_placeholders={"account": reauth_entry.data["userID"]},
                 errors=errors,
             )
+        return self.async_abort(reason="reauth_failed")
 
     async def async_step_creation(
         self, user_input: dict[str, Any] | None = None
@@ -201,10 +202,7 @@ class HanetFlowHandler(
             return self.async_abort(reason="oauth_timeout")
         except Exception as err:
             LOGGER.error("Error resolving OAuth token: %s", err)
-            if (
-                isinstance(err, Exception)
-                and err.status == HTTPStatus.UNAUTHORIZED
-            ):
+            if getattr(err, "status", None) == HTTPStatus.UNAUTHORIZED:
                 return self.async_abort(reason="oauth_unauthorized")
             return self.async_abort(reason="oauth_failed")
 
@@ -295,7 +293,15 @@ class HanetFlowHandler(
     async def async_generate_authorize_url(self) -> str:
         """Generate a url for the user to authorize."""
 
-        redirect_uri = get_host(self.add_url) + "/api/hanet/authcode"+ "?server_url=" + get_hc_url( self.add_url)
+        hc_url = get_hc_url(self.add_url)
+        redirect_uri = get_host(self.add_url) + "/api/hanet/authcode"+ "?server_url=" + hc_url
+        LOGGER.info(
+            "Generated Hanet authorize URL parameters: add_url=%s redirect_uri=%s server_url=%s flow_id=%s",
+            self.add_url,
+            redirect_uri,
+            hc_url,
+            self.flow_id,
+        )
         return str(
             URL(self.flow_impl.authorize_url)
             .with_query(
@@ -318,6 +324,8 @@ class HanetFlowHandler(
         # Hủy flow cũ nếu có
         in_progress = self.hass.config_entries.flow.async_progress_by_handler(self.handler)
         for flow in in_progress:
+            if flow["flow_id"] == self.flow_id:
+                continue
             self.hass.config_entries.flow.async_abort(flow["flow_id"])
 
         return await self.async_step_account_type()
@@ -397,17 +405,29 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry):
         """Initialize options flow."""
-        self.config_entry = config_entry
+        self._config_entry = config_entry
         self.options_data = {}
+        LOGGER.info(
+            "Initialized Hanet options flow: entry_id=%s title=%s",
+            config_entry.entry_id,
+            config_entry.title,
+        )
 
     async def async_step_init(self, user_input=None):
         """Manage options."""
         errors = {}
 
         # Giá trị mặc định lấy từ config_entry.data nếu options chưa có
-        data = {**self.config_entry.data, **self.config_entry.options}
+        data = {**self._config_entry.data, **self._config_entry.options}
         self.add_url = data.get("url", HOST3)  # Lấy URL từ options hoặc mặc định HOST3
         account_type = data.get("account_type")
+        LOGGER.info(
+            "Starting Hanet options init: entry_id=%s account_type=%s add_url=%s has_user_input=%s",
+            self._config_entry.entry_id,
+            account_type,
+            self.add_url,
+            user_input is not None,
+        )
         if account_type == "ai_box":
             return self.async_abort(reason="no_options")
         
@@ -427,13 +447,21 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
         # Đảm bảo Token còn hiệu lực thông qua OAuth2Session của HA
         try:
             implementation = await config_entry_oauth2_flow.async_get_config_entry_implementation(
-                self.hass, self.config_entry
+                self.hass, self._config_entry
             )
-            oauth_session = config_entry_oauth2_flow.OAuth2Session(self.hass, self.config_entry, implementation)
+            oauth_session = config_entry_oauth2_flow.OAuth2Session(self.hass, self._config_entry, implementation)
             await oauth_session.async_ensure_token_valid()
             access_token = oauth_session.token["access_token"]
+            LOGGER.info(
+                "Options flow using refreshed OAuth token: entry_id=%s",
+                self._config_entry.entry_id,
+            )
         except Exception as e:
-            LOGGER.warning(f"Failed to refresh OAuth token natively, fallback to config_entry token: {e}")
+            LOGGER.warning(
+                "Failed to refresh OAuth token natively, fallback to config entry token: entry_id=%s error=%s",
+                self._config_entry.entry_id,
+                e,
+            )
             access_token = data.get("token", {}).get("access_token")
 
         session = async_get_clientsession(self.hass)
@@ -444,11 +472,24 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
             async with session.post(get_host(self.add_url) + API_GET_PLACES_INFO_URL, data = body_data) as response:
                 if response.status == HTTPStatus.OK:
                     self.places_info = await response.json()
+                    LOGGER.info(
+                        "Fetched places for options flow: entry_id=%s count=%s",
+                        self._config_entry.entry_id,
+                        len(self.places_info) if isinstance(self.places_info, list) else "unknown",
+                    )
                 else:
-                    LOGGER.error("Failed to fetch places info: %s", response.status)
+                    LOGGER.error(
+                        "Failed to fetch places info in options flow: entry_id=%s status=%s",
+                        self._config_entry.entry_id,
+                        response.status,
+                    )
                     return self.async_abort(reason="fetch_places_info_failed")
         except Exception as e:
-            LOGGER.error("Error fetching places info: %s", str(e))
+            LOGGER.error(
+                "Error fetching places info in options flow: entry_id=%s error=%s",
+                self._config_entry.entry_id,
+                str(e),
+            )
             return self.async_abort(reason="places_info_not_found")
             
         if user_input is not None and not errors:
@@ -456,6 +497,11 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
                 place for place in self.places_info if str(place["place_id"]) in user_input["selected_places"]
             ]
             self.options_data["selected_places"] = selected_places
+            LOGGER.info(
+                "Options flow selected places: entry_id=%s selected_count=%s",
+                self._config_entry.entry_id,
+                len(selected_places),
+            )
             return await self.async_step_hrm_settings()
 
         places_dict = {
@@ -474,21 +520,33 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
     async def async_step_hrm_settings(self, user_input=None):
         """Manage HRM settings step."""
         errors = {}
-        data = {**self.config_entry.data, **self.config_entry.options}
+        data = {**self._config_entry.data, **self._config_entry.options}
 
         if user_input is not None:
             self.options_data["hrm_sync_enabled"] = user_input.get("hrm_sync_enabled", False)
             self.options_data["hrm_sync_log_enabled"] = user_input.get("hrm_sync_log_enabled", False)
             self.options_data["hrm_sync_interval"] = user_input.get("hrm_sync_interval", 30)
+            LOGGER.info(
+                "Updating Hanet options: entry_id=%s selected_places=%s hrm_sync_enabled=%s hrm_sync_log_enabled=%s hrm_sync_interval=%s",
+                self._config_entry.entry_id,
+                len(self.options_data.get("selected_places", [])),
+                self.options_data["hrm_sync_enabled"],
+                self.options_data["hrm_sync_log_enabled"],
+                self.options_data["hrm_sync_interval"],
+            )
 
             # Gộp options form 1 và form 2
             new_options = {**data, **self.options_data}
             
             self.hass.config_entries.async_update_entry(
-                self.config_entry,
+                self._config_entry,
                 options=new_options,
             )
-            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            await self.hass.config_entries.async_reload(self._config_entry.entry_id)
+            LOGGER.info(
+                "Hanet options updated and entry reloaded: entry_id=%s",
+                self._config_entry.entry_id,
+            )
             return self.async_abort(reason="options_updated")
 
         default_sync_enabled = data.get("hrm_sync_enabled", False)
