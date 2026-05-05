@@ -4,6 +4,13 @@
 
 ---
 
+## Cập nhật ngày 05/05/2026
+
+- Sửa lỗi sinh OAuth callback URL trên Home Assistant 2025 bằng cách lấy định danh HC từ interface thiết bị (`eth0`, fallback `end0`) thay vì `uuid.getnode()`.
+- Cải thiện tương thích Home Assistant 2025 cho config/options flow, gồm `OptionsFlow`, reauth, xử lý lỗi OAuth và cleanup config flow.
+
+---
+
 ## 📋 Tính năng chính
 ### Ngày 20/4/2026
 #### 1. Kết nối Hanet Camera
