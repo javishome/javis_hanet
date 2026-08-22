@@ -24,7 +24,7 @@ class HRMClient:
             "client_secret": self.client_secret
         }
         headers = {"Content-Type": "application/json"}
-        
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(HRM_TOKEN_URL, json=payload, headers=headers) as response:
@@ -51,7 +51,7 @@ class HRMClient:
 
         url = f"{HRM_QUEUE_URL}?place_id={place_id}&limit={limit}"
         headers = {"Authorization": f"Bearer {token}"}
-        
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers=headers) as response:
@@ -70,17 +70,17 @@ class HRMClient:
         """Phản hồi kết quả xử lý hàng đợi về HRM."""
         if not results:
             return True
-            
+
         token = await self.get_token()
         if not token:
             return False
-            
+
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
         payload = {"results": results}
-        
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(HRM_ACK_URL, json=payload, headers=headers) as response:

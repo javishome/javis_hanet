@@ -56,7 +56,7 @@
       "missing_configuration": "Thiếu cấu hình cần thiết để hoàn tất quá trình xác thực.",
       "authorize_url_timeout": "Hết thời gian chờ URL ủy quyền, vui lòng thử lại.",
       "no_url_available": "Không có URL nào có sẵn để hoàn tất quá trình xác thực."
-      
+
     },
     "flow_aborted": {
       "flow_aborted_reload": "Bạn đã tải lại trang khi chưa hoàn tất cấu hình. Vui lòng bắt đầu lại.",
@@ -91,6 +91,6 @@
     "abort": {
       "options_updated": "Cài đặt đã được cập nhật.",
       "no_options": "Không có tùy chọn nào để cấu hình cho loại tài khoản này."
-    } 
+    }
   }
 }

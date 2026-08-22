@@ -51,3 +51,7 @@ Thumbs.db
 *.txt
 person_javis_v2.json
 test_api.py
+
+.coverage
+.coverage.*
+htmlcov/

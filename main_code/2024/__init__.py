@@ -1,7 +1,6 @@
 """The spotify integration."""
 
 from __future__ import annotations
-import uuid
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -9,18 +8,15 @@ import aiohttp
 import logging
 import json
 import voluptuous as vol
-from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.core import ServiceCall, SupportsResponse
 import homeassistant.helpers.config_validation as cv
 import traceback
 from .config_flow import HanetOptionsFlow
 from .const import *
 from .utils import *
 import re
-import traceback
 import pytz
-import re
 import time
-from copy import deepcopy
 
 LOGGER = logging.getLogger(__name__)
 
@@ -79,11 +75,11 @@ async def setup_hrm_sync(hass: HomeAssistant, entry: ConfigEntry):
 
             # Lấy danh sách place_id duy nhất từ person_javis_v2.json
             places = list(
-                set(
+                {
                     int(p.get("place_id"))
                     for p in persons
                     if p.get("place_id") is not None
-                )
+                }
             )
 
             if client and places:
@@ -380,7 +376,7 @@ def load_json_file(path):
         return {}
 
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             content = f.read().strip()
             if not content:
                 LOGGER.error("⚠️ File rỗng")
@@ -687,7 +683,7 @@ class Services:
         payload = call.data.get("payload")
         try:
             data = json.loads(payload)
-            self.hass.add_job(write_data_log_qcd, data)
+            self.hass.async_create_task(self.hass.async_add_executor_job(write_data_log_qcd, data))
             return {"status": "ok"}
         except Exception as e:
             LOGGER.error(traceback.format_exc())
@@ -763,7 +759,7 @@ class Services:
                 await restart_mqtt(self.hass)
             # update period in HRM
         await update_period_api(start_time_str, end_time_str, person_id)
-        return {"status": "ok", "message": f"Updated period"}
+        return {"status": "ok", "message": "Updated period"}
 
     async def sync_periods(self, call: ServiceCall):
         """Handle the sync periods service call."""

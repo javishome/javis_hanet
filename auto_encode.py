@@ -3,7 +3,6 @@ import shutil
 import json
 import subprocess
 import sys
-import re
 from datetime import datetime
 
 # Map: HA version → python version (Linux: python3.12, python3.13)
@@ -23,7 +22,7 @@ def _read_manifest_version(main_code_dir) -> str | None:
     manifest_path = os.path.join(main_code_dir, "manifest.json")
     if not os.path.exists(manifest_path):
         return None
-    with open(manifest_path, "r", encoding="utf-8") as f:
+    with open(manifest_path, encoding="utf-8") as f:
         return str(json.load(f).get("version", "")).strip()
 
 
@@ -34,6 +33,11 @@ def _bump_version_tag(version: str) -> str:
 
 def should_keep_current_version() -> bool:
     """Ask user whether to keep the current manifest version."""
+    argv = getattr(sys, "argv", [])
+    if "--non-interactive" in argv or "--auto-bump" in argv:
+        return False
+    if "-y" in argv or "--yes" in argv or "--keep-version" in argv:
+        return True
     if not hasattr(sys.stdin, "isatty") or not sys.stdin.isatty():
         print("ℹ️ Non-interactive mode detected, default to auto bump version.")
         return False
@@ -54,6 +58,7 @@ def _write_manifest_version(main_code_dir, version: str):
         data["version"] = version
         f.seek(0)
         json.dump(data, f, indent=4)
+        f.write("\n")
         f.truncate()
 
 
@@ -85,12 +90,30 @@ def copy_main_code_to_build(build_dir, main_code_dir):
     shutil.copytree(main_code_dir, build_dir)
 
 
+def get_python_executable(py_ver: str) -> str | None:
+    """Find python executable for given version across PATH and conda envs."""
+    candidates = [
+        f"python{py_ver}",
+        f"/usr/bin/python{py_ver}",
+        f"/usr/local/bin/python{py_ver}",
+        os.path.expanduser(f"~/miniconda3/envs/py{py_ver.replace('.', '')}/bin/python"),
+        os.path.expanduser(f"~/anaconda3/envs/py{py_ver.replace('.', '')}/bin/python"),
+    ]
+    for candidate in candidates:
+        try:
+            r = subprocess.run(
+                f"{candidate} --version", shell=True, capture_output=True, text=True
+            )
+            if r.returncode == 0:
+                return candidate
+        except Exception:
+            continue
+    return None
+
+
 def is_python_available(py_ver: str) -> bool:
-    """Kiểm tra python3.x có trong PATH không."""
-    result = subprocess.run(
-        f"python{py_ver} --version", shell=True, capture_output=True, text=True
-    )
-    return result.returncode == 0
+    """Kiểm tra python3.x có trong PATH hoặc conda env không."""
+    return get_python_executable(py_ver) is not None
 
 
 def _sudo() -> str:
@@ -162,7 +185,7 @@ def _print_manual_guide(py_ver: str):
 
 def encode_with_python(py_ver: str, build_dir: str):
     """Gọi python3.x để encode .py -> .pyc"""
-    py_exe = f"python{py_ver}"
+    py_exe = get_python_executable(py_ver) or f"python{py_ver}"
     encode_script = os.path.join(build_dir, "encode.py")
     cmd = f'{py_exe} "{encode_script}"'
     print(f"🚀 Running: {cmd}")
@@ -262,6 +285,7 @@ def main():
                     data["version"] = new_version
                     f.seek(0)
                     json.dump(data, f, indent=4)
+                    f.write("\n")
                     f.truncate()
                 print(
                     f"📝 Synced version {new_version} to custom_components/javis_hanet/manifest.json"

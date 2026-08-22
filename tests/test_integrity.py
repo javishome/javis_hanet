@@ -14,7 +14,7 @@ BASE_DIR = os.path.join(os.path.dirname(__file__), "..", "main_code", "2024")
 
 def _load_services_yaml():
     path = os.path.join(BASE_DIR, "services.yaml")
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
@@ -22,7 +22,7 @@ def _load_const_services():
     """Parse SVC_ constants from const.py."""
     path = os.path.join(BASE_DIR, "const.py")
     services = []
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             if line.startswith("SVC_"):
                 # SVC_WRITE_PERSON = "write_person"
@@ -63,7 +63,7 @@ class TestServicesYaml:
     def test_no_duplicate_service_keys(self):
         """Không được có service trùng tên (YAML spec đè key cuối)."""
         path = os.path.join(BASE_DIR, "services.yaml")
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             content = f.read()
         # Count top-level keys that start at column 0
         keys = []
@@ -92,7 +92,7 @@ class TestEncodeCompleteness:
     def test_encode_includes_all_py_files(self):
         """encode.py phải encode tất cả các file .py chính."""
         encode_path = os.path.join(BASE_DIR, "encode.py")
-        with open(encode_path, "r", encoding="utf-8") as f:
+        with open(encode_path, encoding="utf-8") as f:
             content = f.read()
 
         required = ["__init__.py", "const.py", "utils.py", "hrm_api.py"]
@@ -102,7 +102,7 @@ class TestEncodeCompleteness:
     def test_no_config_flow_in_encode(self):
         """config_flow.py KHÔNG nên bị encode (vì HA cần import class)."""
         encode_path = os.path.join(BASE_DIR, "encode.py")
-        with open(encode_path, "r", encoding="utf-8") as f:
+        with open(encode_path, encoding="utf-8") as f:
             content = f.read()
         # config_flow thường không nên encode, nhưng nếu có thì test sẽ fail
         # Bỏ comment dòng dưới nếu muốn enforce:
@@ -114,7 +114,7 @@ class TestManifest:
     def test_manifest_valid_json(self):
         path = os.path.join(BASE_DIR, "manifest.json")
         import json
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
         assert "domain" in data
         assert "version" in data
@@ -123,7 +123,7 @@ class TestManifest:
     def test_manifest_has_required_keys(self):
         path = os.path.join(BASE_DIR, "manifest.json")
         import json
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
         for key in ("domain", "name", "version"):
             assert key in data, f"manifest.json thiếu key '{key}'"
@@ -133,14 +133,14 @@ class TestConfigFlowCompatibility:
     def test_options_flow_does_not_assign_config_entry_property(self):
         """HA 2025.12 makes OptionsFlow.config_entry read-only."""
         path = os.path.join(BASE_DIR, "config_flow.py")
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             content = f.read()
 
         assert "self.config_entry = config_entry" not in content
 
     def test_oauth_error_handling_does_not_assume_status_attr(self):
         path = os.path.join(BASE_DIR, "config_flow.py")
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             content = f.read()
 
         assert "err.status" not in content
@@ -148,14 +148,14 @@ class TestConfigFlowCompatibility:
 
     def test_config_flow_does_not_abort_current_flow(self):
         path = os.path.join(BASE_DIR, "config_flow.py")
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             content = f.read()
 
         assert 'flow["flow_id"] == self.flow_id' in content
 
     def test_reauth_confirm_always_returns_flow_result(self):
         path = os.path.join(BASE_DIR, "config_flow.py")
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             content = f.read()
 
         assert "async_step_reauth_confirm" in content

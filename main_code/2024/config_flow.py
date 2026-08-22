@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 import logging
-from typing import Any, Dict, cast
+from typing import Any, cast
 
-from homeassistant.config_entries import SOURCE_REAUTH, ConfigFlowResult
+try:
+    from homeassistant.config_entries import ConfigFlowResult
+except ImportError:
+    from homeassistant.data_entry_flow import FlowResult as ConfigFlowResult
 from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.const import  CONF_URL
 from homeassistant import config_entries
@@ -94,7 +97,7 @@ class HanetFlowHandler(
         self.logger.info("Token data: %s", self.token_data)
 
         return await self.async_step_select_places()
-    
+
     async def async_step_select_places(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -119,9 +122,9 @@ class HanetFlowHandler(
                     data_schema=schema,
                     errors=errors,
                 )
-            
+
             self.logger.info("Selected places: %s", selected)
-            
+
             selected_places = [
                 place for place in self.places_info if str(place["place_id"]) in selected]
 
@@ -154,7 +157,7 @@ class HanetFlowHandler(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Confirm reauth dialog."""
-        errors: Dict[str, str] = {}
+        errors: dict[str, str] = {}
         reauth_entry = self._get_reauth_entry()
         errors["base"] = "reauth_failed"
         if user_input is None:
@@ -329,7 +332,7 @@ class HanetFlowHandler(
             self.hass.config_entries.flow.async_abort(flow["flow_id"])
 
         return await self.async_step_account_type()
-    
+
     async def async_step_account_type(self, user_input=None):
         """Choose between Hanet account or AI Box account."""
         errors = {}
@@ -393,13 +396,13 @@ class HanetFlowHandler(
             errors=errors,
             description_placeholders = {"ip": "192.168.168.35"}
         )
-    
+
     @staticmethod
     def async_get_options_flow(config_entry: config_entries.ConfigEntry):
         """Return the options flow handler for this config entry."""
         return HanetOptionsFlow(config_entry)
 
-    
+
 class HanetOptionsFlow(config_entries.OptionsFlow):
     """Handle options for WebSocket Component."""
 
@@ -430,7 +433,7 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
         )
         if account_type == "ai_box":
             return self.async_abort(reason="no_options")
-        
+
         if user_input is not None:
             # Nếu user nhập thông tin, validate
             selected = user_input["selected_places"]
@@ -438,7 +441,7 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
                 errors["base"] = "no_place_selected"
             else:
                 # Chỉ lọc những place có thật
-                # Nhưng do API call ở dưới chưa diễn ra, ta dùng self.places_info sinh ra từ trước (nếu click lại) 
+                # Nhưng do API call ở dưới chưa diễn ra, ta dùng self.places_info sinh ra từ trước (nếu click lại)
                 # hoặc gán tạm, vì API places sẽ gọi sau.
                 # Cách tốt nhất là gọi API lấy place info TRƯỚC khối user_input.
                 pass  # Mình sẽ move API call lên đầu hàm để validate đúng
@@ -491,7 +494,7 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
                 str(e),
             )
             return self.async_abort(reason="places_info_not_found")
-            
+
         if user_input is not None and not errors:
             selected_places = [
                 place for place in self.places_info if str(place["place_id"]) in user_input["selected_places"]
@@ -510,7 +513,7 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
         default_selected_places = [
             str(place["place_id"]) for place in data.get("selected_places", [])
         ]
-        
+
         schema = vol.Schema({
             vol.Required("selected_places", default=default_selected_places): cv.multi_select(places_dict),
         })
@@ -537,7 +540,7 @@ class HanetOptionsFlow(config_entries.OptionsFlow):
 
             # Gộp options form 1 và form 2
             new_options = {**data, **self.options_data}
-            
+
             self.hass.config_entries.async_update_entry(
                 self._config_entry,
                 options=new_options,

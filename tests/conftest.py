@@ -10,27 +10,27 @@ pkg_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../main_code
 
 class CustomComponentImporter:
     """Mock importer để biến thư mục main_code/2024 thành package `custom_components.javis_hanet` hợp lệ trong Python 3+"""
-    
+
     @classmethod
     def find_spec(cls, fullname, path=None, target=None):
         if fullname.startswith("custom_components.javis_hanet"):
             rel_path = fullname.replace("custom_components.javis_hanet", "").replace(".", os.sep)
-            
+
             if rel_path == "":
                 filepath = os.path.join(pkg_path, "__init__.py")
                 is_pkg = True
             else:
                 filepath = os.path.join(pkg_path, rel_path.lstrip(os.sep) + ".py")
                 is_pkg = False
-                
+
             if not os.path.exists(filepath):
                 return None
-                
+
             spec = importlib.util.spec_from_file_location(fullname, filepath)
             if is_pkg:
                 spec.submodule_search_locations = [pkg_path]
             return spec
-            
+
         return None
 
 # Tạo nhánh cha custom_components vào sys.modules trước
@@ -56,7 +56,7 @@ if sys.platform == "win32":
 # Chỉ kích hoạt nếu pytest-homeassistant-custom-component đã được cài đặt
 try:
     from pytest_homeassistant_custom_component.common import MockConfigEntry
-    
+
     @pytest.fixture
     def mock_config_entry():
         """Tạo một ConfigEntry giả để test."""

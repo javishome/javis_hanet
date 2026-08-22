@@ -196,6 +196,137 @@ except vol.Invalid:
     check_true("write_person requires payload", True)
 
 
+
+# ------------------------------------------------------------
+# Test service handler executions
+# ------------------------------------------------------------
+import asyncio
+from types import SimpleNamespace
+
+class FakeConfigEntries:
+    def __init__(self):
+        self.updated_entries = []
+
+    def async_update_entry(self, entry, options):
+        entry.options = options
+        self.updated_entries.append((entry, options))
+
+
+class FullFakeHass:
+    def __init__(self):
+        self.services = FakeServicesRegistry()
+        self.config_entries = FakeConfigEntries()
+        self.data = {}
+
+    def async_create_task(self, coro):
+        pass
+
+
+async def run_async_service_tests():
+    fake_entry = SimpleNamespace(options={"hrm_sync_interval": 30, "hrm_sync_enabled": True, "hrm_sync_log_enabled": False})
+    hass = FullFakeHass()
+    hass.data[DOMAIN] = {"entry": fake_entry}
+
+    # Mock setup_hrm_sync to avoid real network/timers in test
+    original_setup = javis_init.setup_hrm_sync
+    async def mock_setup(h, e):
+        pass
+    javis_init.setup_hrm_sync = mock_setup
+
+    try:
+        svc = javis_init.Services(hass)
+
+        show_case(
+            "SR-004",
+            "set_hrm_sync_interval rejects interval < 5",
+            "call with interval=3",
+            "status=error",
+            "Safety limit against high-frequency API polling",
+        )
+        res_reject = await svc.set_hrm_sync_interval(SimpleNamespace(data={"interval": 3}))
+        check("interval < 5 error status", res_reject.get("status"), "error")
+
+        show_case(
+            "SR-005",
+            "set_hrm_sync_interval updates entry options when interval >= 5",
+            "call with interval=60",
+            "status=ok and entry.options[hrm_sync_interval] == 60",
+            "Applies dynamic interval reconfiguration",
+        )
+        res_ok = await svc.set_hrm_sync_interval(SimpleNamespace(data={"interval": 60}))
+        check("interval >= 5 success status", res_ok.get("status"), "ok")
+        check("entry option interval updated", fake_entry.options.get("hrm_sync_interval"), 60)
+
+        show_case(
+            "SR-006",
+            "set_hrm_sync_enabled and set_hrm_sync_log_enabled toggle options",
+            "toggling sync enabled to False and log enabled to True",
+            "status=ok and entry options updated",
+            "Dynamic toggles for syncing and logging",
+        )
+        res_sync_toggle = await svc.set_hrm_sync_enabled(SimpleNamespace(data={"enabled": False}))
+        check("sync toggle status", res_sync_toggle.get("status"), "ok")
+        check("sync option updated", fake_entry.options.get("hrm_sync_enabled"), False)
+
+        res_log_toggle = await svc.set_hrm_sync_log_enabled(SimpleNamespace(data={"enabled": True}))
+        check("log toggle status", res_log_toggle.get("status"), "ok")
+        check("log option updated", fake_entry.options.get("hrm_sync_log_enabled"), True)
+
+        show_case(
+            "SR-007",
+            "check_faceid_group_sensor invokes handle_person_data",
+            "call check_faceid_group_sensor",
+            "status=ok",
+            "Manual sensor reconciliation service",
+        )
+        original_handle_person = javis_init.handle_person_data
+        async def mock_handle_person(h):
+            pass
+        javis_init.handle_person_data = mock_handle_person
+        try:
+            res_sensor = await svc.check_faceid_group_sensor(SimpleNamespace(data={}))
+            check("check_faceid_group_sensor status", res_sensor.get("status"), "ok")
+        finally:
+            javis_init.handle_person_data = original_handle_person
+    finally:
+        javis_init.setup_hrm_sync = original_setup
+
+
+        show_case(
+            "SR-008",
+            "sync_periods handler returns ok when sync_periods_api is True",
+            "call sync_periods",
+            "status=ok",
+            "Service response status handling",
+        )
+        original_sync = javis_init.sync_periods_api
+        async def mock_sync_ok(h):
+            return True
+        javis_init.sync_periods_api = mock_sync_ok
+        try:
+            res_sync_ok = await svc.sync_periods(SimpleNamespace(data={}))
+            check("sync_periods ok status", res_sync_ok.get("status"), "ok")
+        finally:
+            javis_init.sync_periods_api = original_sync
+
+        show_case(
+            "SR-009",
+            "sync_periods handler returns error when sync_periods_api is False or raises",
+            "call sync_periods with failure",
+            "status=error",
+            "Service error response",
+        )
+        async def mock_sync_fail(h):
+            return False
+        javis_init.sync_periods_api = mock_sync_fail
+        try:
+            res_sync_fail = await svc.sync_periods(SimpleNamespace(data={}))
+            check("sync_periods fail status", res_sync_fail.get("status"), "error")
+        finally:
+            javis_init.sync_periods_api = original_sync
+
+asyncio.run(run_async_service_tests())
+
 print("\n" + "=" * 60)
 if tests_failed == 0:
     print(f"ALL {tests_run} TESTS PASSED")

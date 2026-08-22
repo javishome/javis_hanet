@@ -1,3 +1,4 @@
+import asyncio
 from .const import *
 import json
 import os
@@ -29,46 +30,59 @@ def is_new_version():
 
 def write_data_log_qcd(data):
     # check if folder exist
-    if os.path.exists(FOLDER_PERSON_LOG) == False:
+    if not os.path.exists(FOLDER_PERSON_LOG):
         os.makedirs(FOLDER_PERSON_LOG)
     # convert data to string and add to file
     with open(PATH_PERSON_LOG, "a", encoding="utf-8") as txt_file:
         txt_file.write(str(data) + "\n")
 
 
-async def change_file_name(secret_key, date_str=None):
-    # change name
+def _rotate_and_read_log(date_str=None):
     if not date_str:
-        if os.path.exists(PATH_PERSON_LOG) == False:
-            return
+        if not os.path.exists(PATH_PERSON_LOG):
+            return "NO_FILE", None
         new_file_name = datetime.now().strftime("%y%m%d") + ".log"
     else:
         try:
             new_file_name = datetime.strptime(date_str, "%Y-%m-%d").strftime("%y%m%d") + ".log"
         except ValueError:
             LOGGER.error("Invalid date format. Use YYYY-MM-DD.")
-            return
+            return "INVALID_DATE", None
     new_file_path = FOLDER_PERSON_LOG + new_file_name
-    os.rename(PATH_PERSON_LOG, new_file_path)
+    try:
+        os.rename(PATH_PERSON_LOG, new_file_path)
+    except Exception as e:
+        LOGGER.error(f"Error renaming {PATH_PERSON_LOG} to {new_file_path}: {e}")
+        return False, None
+
     if not os.path.exists(new_file_path):
         LOGGER.error(f"File {new_file_path} does not exist.")
+        return False, None
+
+    payload = []
+    with open(new_file_path, encoding="utf-8") as txt_file:
+        file_content = txt_file.read()
+        for line in file_content.split("\n"):
+            if not line:
+                continue
+            line = line.replace("'", '"')
+            data = json.loads(line)
+            payload.append(data)
+    return new_file_path, payload
+
+
+async def change_file_name(secret_key, date_str=None):
+    new_file_path, payload = await asyncio.to_thread(_rotate_and_read_log, date_str)
+    if new_file_path == "INVALID_DATE" or new_file_path == "NO_FILE":
+        return None
+    if not new_file_path:
         return False
-    
 
     qcd_url = "https://qcd.arrow-tech.vn/api/v2/resum-timesheet"
     headers = {
         "Content-Type": "application/json; charset=utf-8",
         "timesheet_secret_key": secret_key,
     }
-    payload = []
-    with open(new_file_path, "r", encoding="utf-8") as txt_file:
-        content = txt_file.read()
-        for line in content.split("\n"):
-            if line == "":
-                continue
-            line = line.replace("'", '"')
-            data = json.loads(line)
-            payload.append(data)
 
     async with aiohttp.ClientSession() as session:
         async with session.post(qcd_url, json=payload, headers=headers) as response:
@@ -118,7 +132,7 @@ def _read_interface_mac(interface):
     if not interface:
         return None
     try:
-        with open(f"/sys/class/net/{interface}/address", "r", encoding="utf-8") as mac_file:
+        with open(f"/sys/class/net/{interface}/address", encoding="utf-8") as mac_file:
             return mac_file.read().strip()
     except FileNotFoundError:
         return None
@@ -128,6 +142,9 @@ def _read_interface_mac(interface):
 
 
 def _get_mac_details():
+    # LƯU Ý THIẾT KẾ: Quét danh sách giao diện mạng ("eth0", "end0") là cấu hình phần cứng
+    # mặc định và cố định của dòng thiết bị Javis Home Controller (HC).
+    # Không cần quét các interface khác để đảm bảo tính nhất quán định danh thiết bị.
     for interface in ("eth0", "end0"):
         mac = _read_interface_mac(interface)
         if not mac:
@@ -152,19 +169,16 @@ def get_mac():
 
 def yaml2dict(filename):
     try:
-        exist = os.path.exists(filename)
-        if not exist:
-            f = open(filename, 'w+')
-            f.close()
-        file = open(filename, 'r', encoding='utf8')
-        res = yaml.load(file, Loader=yaml.FullLoader)
-        file.close()
-        return res
+        if not os.path.exists(filename):
+            with open(filename, 'w+', encoding='utf-8'):
+                pass
+        with open(filename, encoding='utf8') as file:
+            return yaml.load(file, Loader=yaml.FullLoader)
     except Exception as e:
         LOGGER.error(f"Error loading YAML file {filename}: {e}")
         LOGGER.error(traceback.format_exc())
         return {}
-    
+
 def dict2yaml(dict_, filename):
     with open(filename, 'w', encoding='utf-8') as outfile:
         yaml.dump(dict_, outfile, default_flow_style=False, allow_unicode=True)

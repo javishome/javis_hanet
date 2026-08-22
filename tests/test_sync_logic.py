@@ -55,14 +55,14 @@ print("🧪 TEST SYNC LOGIC (Import trực tiếp từ main_code/2024)")
 print("=" * 60)
 
 # ── Test extract_place_ids ─── (logic inline trong __init__.py dòng 71)
-# Logic: list(set(int(p.get("place_id")) for p in persons if p.get("place_id") is not None))
+# Logic: list({int(p.get("place_id")) for p in persons if p.get("place_id") is not None})
 # Ta test logic này bằng cách gọi trực tiếp ra
 print("\n── Extract Place IDs (logic từ __init__.py dòng 71) ──")
 
 def extract_place_ids_from_init(person_data):
     """Tái sử dụng đúng cú pháp logic từ __init__.py dòng 71."""
     persons = person_data.get("person", [])
-    return list(set(int(p.get("place_id")) for p in persons if p.get("place_id") is not None))
+    return list({int(p.get("place_id")) for p in persons if p.get("place_id") is not None})
 
 places = extract_place_ids_from_init(SAMPLE_PERSON_DATA)
 check("Trích xuất unique place_ids", set(places), {5390, 8601})
