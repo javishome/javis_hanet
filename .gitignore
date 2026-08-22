@@ -55,3 +55,6 @@ test_api.py
 .coverage
 .coverage.*
 htmlcov/
+
+docs/kinh_nghiem.md
+docs/
