@@ -5,12 +5,10 @@
 ---
 
 ## Cập nhật ngày 22/08/2026 (Version v20260822)
-
-- **Chuyển đổi Async File I/O**: Chuyển các thao tác đọc/ghi file đồng bộ (xoay vòng log QCD, `handle_write_person`, `yaml2dict`) sang `asyncio.to_thread` và `async_add_executor_job` để không block event loop của Home Assistant.
-- **Tương thích HA 2025/2026**: Bổ sung fallback import `ConfigFlowResult` cho config flow.
-- **Tự động Compile Bytecode (.pyc)**: Tích hợp `auto_encode.py` tự động nhận diện Python 3.12/3.13 và compile vào Pre-commit Hook.
-- **Tối ưu CI/CD Pipeline**: Chuyển sang Docker `alpine:latest` giúp sync release lên GitHub trong ~5 giây.
-- **Kiểm thử & Linter**: Bổ sung test tự động toàn diện cho 100% 8 Service (`sync_periods`, `update_period`, `push_to_qcd`, `check_faceid_group_sensor`, `set_hrm_sync_*`).
+- Xử lý đọc/ghi file bất đồng bộ (Async) tránh đơ Home Assistant.
+- Tự động biên dịch file `.pyc` bảo mật khi commit.
+- Tối ưu pipeline CI/CD build siêu tốc (~5 giây).
+- Bổ sung bộ test và linter kiểm tra toàn bộ 8 services.
 
 ---
 
