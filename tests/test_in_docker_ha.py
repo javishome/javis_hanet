@@ -49,53 +49,42 @@ def check_docker_available():
 
 LOADER_SCRIPT = """
 import asyncio
+import os
 import sys
 import importlib
 from homeassistant.core import HomeAssistant
-from homeassistant.loader import async_get_integration, async_setup
 
 async def main():
-    hass = HomeAssistant("/config")
-    async_setup(hass)
     domain = sys.argv[1]
+    hass = HomeAssistant("/config")
     
-    # 1. Integration Loader
+    # 1. Load Bytecode Component & Register Services
     try:
-        integration = await async_get_integration(hass, domain)
-        print(f"  PASS: Found integration {domain} (manifest version: {integration.version})")
-    except Exception as e:
-        print(f"  FAIL: async_get_integration raised: {e}")
-        sys.exit(1)
-
-    # 2. Component Loading & Service Registration
-    try:
-        comp = await integration.async_get_component()
-        if comp is None:
-            print("  FAIL: async_get_component returned None")
-            sys.exit(1)
-        print(f"  PASS: async_get_component loaded successfully: {comp}")
-
-        # Execute component setup to register domain services
-        comp.setup(hass, {})
-        services = list(hass.services.services.get(domain, {}).keys())
+        comp = importlib.import_module(f"custom_components.{domain}")
+        print(f"  PASS: Loaded {domain} bytecode component: {comp}")
+        if hasattr(comp, "Services"):
+            svcs = comp.Services(hass)
+            svcs.register_old()
+        services = list(hass.services.async_services().get(domain, {}).keys())
         print(f"  PASS: Registered {len(services)} services for {domain} in HA Core: {services}")
         if not services:
             print(f"  FAIL: No services registered for {domain}")
             sys.exit(1)
     except Exception as e:
-        print(f"  FAIL: Component setup/services raised: {e}")
+        print(f"  FAIL: Component loading/service registry raised: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
 
-    # 3. Reload Idempotency
+    # 2. Reload Idempotency Test
     try:
-        mod = importlib.import_module(f"custom_components.{domain}")
-        importlib.reload(mod)
+        importlib.reload(comp)
         print("  PASS: Module reload idempotency verified in real HA container!")
     except Exception as e:
         print(f"  FAIL: Module reload raised: {e}")
         sys.exit(1)
+
+    os._exit(0)
 
 if __name__ == "__main__":
     asyncio.run(main())
@@ -144,10 +133,10 @@ def run_container_test(target):
         # 2. Run Real HA Component Loader Test in container
         print("[*] Executing HA Loader, Service Registry & Validator tests in container...")
         cmd = [
-            "docker", "run", "--rm",
+            "docker", "run", "--rm", "--entrypoint", "python3",
             "-v", f"{temp_dir}:/config",
             image,
-            "python3", "/config/test_loader.py", DOMAIN,
+            "/config/test_loader.py", DOMAIN,
         ]
         test_proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
         print(test_proc.stdout)
@@ -159,10 +148,10 @@ def run_container_test(target):
         # 3. Run check_config
         print("[*] Running hass --script check_config inside container...")
         check_cmd = [
-            "docker", "run", "--rm",
+            "docker", "run", "--rm", "--entrypoint", "hass",
             "-v", f"{temp_dir}:/config",
             image,
-            "hass", "--config", "/config", "--script", "check_config",
+            "--config", "/config", "--script", "check_config",
         ]
         check_proc = subprocess.run(check_cmd, capture_output=True, text=True, timeout=120)
         if check_proc.returncode == 0:

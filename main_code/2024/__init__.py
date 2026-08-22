@@ -584,6 +584,30 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
+        self.hass.services.async_register(
+            DOMAIN,
+            SVC_SET_HRM_SYNC_ENABLED,
+            self.set_hrm_sync_enabled,
+            schema=vol.Schema(
+                {
+                    vol.Required("enabled"): cv.boolean,
+                }
+            ),
+            supports_response=SupportsResponse.OPTIONAL,
+        )
+
+        self.hass.services.async_register(
+            DOMAIN,
+            SVC_SET_HRM_SYNC_LOG_ENABLED,
+            self.set_hrm_sync_log_enabled,
+            schema=vol.Schema(
+                {
+                    vol.Required("enabled"): cv.boolean,
+                }
+            ),
+            supports_response=SupportsResponse.OPTIONAL,
+        )
+
     def register_new(self) -> None:
         """Register services for javis_lock integration."""
         # Tạo passcode
