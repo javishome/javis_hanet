@@ -208,7 +208,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await setup_daily_expiry_cleanup(hass)
     except ConfigEntryAuthFailed:
         raise
-    except (ConfigEntryNotReady, aiohttp.ClientError, socket.gaierror, TimeoutError, OSError) as e:
+    except (ConfigEntryNotReady, aiohttp.ClientError, socket.gaierror, TimeoutError, OSError, asyncio.TimeoutError) as e:
         LOGGER.warning(f"Không thể kết nối máy chủ Hanet ({entry.data.get('url')}): {e}. Sẽ tự động thử lại khi có mạng.")
         raise ConfigEntryNotReady(f"Không thể kết nối máy chủ Hanet: {e}") from e
     except Exception as e:
@@ -254,7 +254,8 @@ async def update_data_ai_box(hass, entry):
     headers = {"Cookie": f"key={key}"}
     info = {"person": []}
 
-    async with aiohttp.ClientSession() as session:
+    timeout = aiohttp.ClientTimeout(total=10, connect=5)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(url, headers=headers) as response:
             if response.status != 200:
                 LOGGER.error(f"Failed to fetch data from AI Box: {response.status}")
@@ -282,7 +283,8 @@ async def update_data_hanet(hass: HomeAssistant, entry):
     data = {"access_token": token.get("access_token"), "places": places}
     add_url = entry.data.get("url")
 
-    async with aiohttp.ClientSession() as session:
+    timeout = aiohttp.ClientTimeout(total=10, connect=5)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.post(
             get_host(add_url) + "/api/hanet/get_info_with_places", json=data
         ) as response:
