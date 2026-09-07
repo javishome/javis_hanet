@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import ConfigEntryNotReady, ConfigEntryAuthFailed
+import socket
 from homeassistant.core import HomeAssistant
 import aiohttp
 import logging
@@ -204,6 +206,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN]["hrm_client"] = HRMClient()
         await setup_hrm_sync(hass, entry)
         await setup_daily_expiry_cleanup(hass)
+    except ConfigEntryAuthFailed:
+        raise
+    except (ConfigEntryNotReady, aiohttp.ClientError, socket.gaierror, TimeoutError, OSError) as e:
+        LOGGER.warning(f"Không thể kết nối máy chủ Hanet ({entry.data.get('url')}): {e}. Sẽ tự động thử lại khi có mạng.")
+        raise ConfigEntryNotReady(f"Không thể kết nối máy chủ Hanet: {e}") from e
     except Exception as e:
         LOGGER.error(f"Error setting up entry: {e}")
         LOGGER.error(traceback.format_exc())
@@ -279,10 +286,19 @@ async def update_data_hanet(hass: HomeAssistant, entry):
         async with session.post(
             get_host(add_url) + "/api/hanet/get_info_with_places", json=data
         ) as response:
-            info = await response.json()
-            if response.status != 200:
-                LOGGER.error(info)
+            if response.status in (401, 403):
+                info = await response.text()
+                LOGGER.error("Auth failed for Hanet (HTTP %s): %s", response.status, info[:200])
+                raise ConfigEntryAuthFailed("Xác thực Hanet thất bại hoặc token hết hạn")
+            elif response.status >= 500:
+                info = await response.text()
+                LOGGER.warning("Hanet server error (HTTP %s): %s", response.status, info[:200])
+                raise ConfigEntryNotReady(f"Máy chủ Hanet lỗi HTTP {response.status}")
+            elif response.status != 200:
+                info = await response.text()
+                LOGGER.error("Hanet API error (HTTP %s): %s", response.status, info[:200])
                 return False
+            info = await response.json()
 
     if info and isinstance(info.get("person"), list):
         async with PERSON_FILE_LOCK:
