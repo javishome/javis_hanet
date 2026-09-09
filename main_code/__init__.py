@@ -36,8 +36,8 @@ PERSON_FILE_LOCK = asyncio.Lock()
 HANOI_TZ = pytz.timezone("Asia/Ho_Chi_Minh")
 
 
-def setup(hass: HomeAssistant, config: dict) -> bool:
-    """Set up the TTLock component."""
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the Javis Hanet component."""
     if is_new_version():
         Services(hass).register_new()
     else:
@@ -629,7 +629,7 @@ class Services:
     def register_new(self) -> None:
         """Register services for javis_lock integration."""
         # Tạo passcode
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_WRITE_PERSON,
             self.handle_write_person,
@@ -641,7 +641,7 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_PUSH_TO_QCD,
             self.change_face_log_name,
@@ -656,7 +656,7 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_UPDATE_PERIOD,
             self.update_period,
@@ -670,21 +670,21 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_CHECK_FACEID_GROUP_SENSOR,
             self.check_faceid_group_sensor,
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_SYNC_PERIODS,
             self.sync_periods,
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_SET_HRM_SYNC_INTERVAL,
             self.set_hrm_sync_interval,
@@ -696,7 +696,7 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_SET_HRM_SYNC_ENABLED,
             self.set_hrm_sync_enabled,
@@ -708,7 +708,7 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_SET_HRM_SYNC_LOG_ENABLED,
             self.set_hrm_sync_log_enabled,
