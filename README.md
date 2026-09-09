@@ -2,26 +2,25 @@
 
 ## Chức năng chính
 ### Ngày 09/09/2026 (Version v20260909)
-- Bản build Universal duy nhất tương thích mọi phiên bản Home Assistant Core (2024.x, 2025.x, 2026.x+).
-- Tự động mã hóa bảo vệ mã nguồn qua Universal Dynamic Encrypted Loader (nạp động trên RAM).
-- Khởi tạo bất đồng bộ `async_setup` tuân thủ chuẩn Event Loop Thread-Safety của HA.
-- Tích hợp ma trận kiểm thử 2 tầng tự động trên 5 mốc HA Core khi chạy `auto_encode.py`.
-- Chuẩn hóa cấu trúc: mã nguồn gốc tại `main_code/`, bản build xuất thẳng vào `build/`.
-- Chuẩn hóa Release Tag dạng `vYYYYMMDD` đồng bộ liên thông HACS và Server Version Policy.
+- **1 bản cài đặt duy nhất**: Tương thích mượt mà với mọi phiên bản Home Assistant (từ HA 2024 đến HA 2025+).
+- **Bảo vệ mã nguồn an toàn**: Tự động mã hóa code bảo mật mà không làm ảnh hưởng đến tốc độ chạy.
+- **Khởi chạy mượt mà**: Sửa lỗi luồng, đảm bảo không bị treo khi Home Assistant khởi động và gọi các dịch vụ đồng bộ.
+- **Kiểm thử toàn diện**: Đạt 100% trên các bài test tự động và thiết bị Home Assistant thực tế.
+- **Tối ưu cập nhật**: Chuẩn hóa đóng gói để cài đặt và nâng cấp dễ dàng, ổn định qua HACS.
 
 ### Ngày 22/08/2026 (Version v20260822)
 - Xử lý đọc/ghi file bất đồng bộ (Async) tránh đơ Home Assistant.
-- Tự động biên dịch file `.pyc` bảo mật khi commit.
-- Tối ưu pipeline CI/CD build siêu tốc (~5 giây).
-- Bổ sung bộ test và linter kiểm tra toàn bộ 8 services.
+- Tự động biên dịch bảo mật khi commit.
+- Tối ưu pipeline build nhanh và ổn định.
+- Bổ sung bộ test kiểm tra toàn bộ 8 services.
 
 ### Ngày 05/05/2026
-- Sửa lỗi sinh OAuth callback URL trên Home Assistant 2025 bằng cách lấy định danh HC từ interface thiết bị (`eth0`, fallback `end0`) thay vì `uuid.getnode()`.
-- Cải thiện tương thích Home Assistant 2025 cho config/options flow, gồm `OptionsFlow`, reauth, xử lý lỗi OAuth và cleanup config flow.
+- Sửa lỗi tạo đường dẫn OAuth callback trên Home Assistant 2025.
+- Cải thiện luồng cấu hình, đăng nhập lại (reauth) và xử lý lỗi kết nối.
 
 ### Ngày 20/4/2026
-- Tích hợp Hanet Camera qua OAuth 2.0 và kết nối AI Box qua IP/Port/Key.
+- Tích hợp camera Hanet qua tài khoản OAuth 2.0 và kết nối AI Box qua IP/Port/Key.
 - Tự động đồng bộ danh sách nhân sự, camera, vị trí vào file `person_javis_v2.json`.
-- Đồng bộ tự động từ hàng đợi HRM (`/hc/auto-open-queue`) và phản hồi ACK.
-- Hỗ trợ đầy đủ 8 services: ghi nhận diện chấm công, đẩy QCD, cập nhật period, đồng bộ HRM.
-- Tự động dọn dẹp các period hết hạn hàng ngày vào 00:05.
+- Tự động đồng bộ lịch mở cửa từ hàng đợi HRM và phản hồi xác nhận (ACK).
+- Hỗ trợ đầy đủ 8 dịch vụ: ghi log chấm công, đẩy dữ liệu lên QCD, cập nhật thời gian mở cửa, đồng bộ HRM.
+- Tự động dọn dẹp các quyền mở cửa hết hạn vào 00:05 hàng ngày.
